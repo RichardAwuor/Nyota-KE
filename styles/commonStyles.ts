@@ -2,33 +2,33 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  // Kenyan flag inspired colors with modern twist
-  background: '#FFFFFF',
-  backgroundDark: '#1A1A1A',
+  // Deep blue and beige theme
+  background: '#F5F5DC', // Beige
+  backgroundDark: '#0D47A1', // Deep Blue
   
   text: '#2C2C2C',
-  textDark: '#F5F5F5',
+  textDark: '#F5F5DC', // Beige text on dark
   
   textSecondary: '#6B6B6B',
-  textSecondaryDark: '#A0A0A0',
+  textSecondaryDark: '#D4C5A0', // Lighter beige for secondary text
   
-  primary: '#006B3F', // Kenyan green
-  primaryDark: '#00A859',
+  primary: '#0D47A1', // Deep Blue
+  primaryDark: '#1565C0', // Lighter deep blue for dark mode
   
-  secondary: '#BB0000', // Kenyan red
-  secondaryDark: '#E63946',
+  secondary: '#8B7355', // Brown/tan accent
+  secondaryDark: '#A68A6A',
   
   accent: '#FFD700', // Gold accent
   accentDark: '#FFC300',
   
-  card: '#F8F9FA',
-  cardDark: '#2A2A2A',
+  card: '#FFFFFF',
+  cardDark: '#1565C0', // Lighter blue for cards in dark mode
   
-  highlight: '#E8F5E9',
-  highlightDark: '#1B3A2F',
+  highlight: '#E8EAF6', // Light blue highlight
+  highlightDark: '#1A237E', // Darker blue highlight
   
-  border: '#E0E0E0',
-  borderDark: '#404040',
+  border: '#D4C5A0',
+  borderDark: '#5C7FB8',
   
   error: '#DC3545',
   success: '#28A745',

@@ -45,9 +45,6 @@ export default function RoleSelectScreen() {
           />
           <Text style={[styles.title, { color: textColor }]}>Welcome to NO-COLLAR</Text>
           <Text style={[styles.slogan, { color: primaryColor }]}>Kazi iko</Text>
-          <Text style={[styles.subtitle, { color: textSecondaryColor }]}>
-            Choose how you want to use the platform
-          </Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -108,8 +105,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logo: {
-    width: 100,
-    height: 100,
+    width: 200,
+    height: 200,
     marginBottom: 16,
   },
   title: {
@@ -122,10 +119,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontStyle: 'italic',
     marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
     textAlign: 'center',
   },
   cardsContainer: {
