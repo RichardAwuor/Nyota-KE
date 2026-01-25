@@ -22,7 +22,7 @@ export default function RoleSelectScreen() {
   const textSecondaryColor = isDark ? colors.textSecondaryDark : colors.textSecondary;
   const cardColor = isDark ? colors.cardDark : colors.card;
   const primaryColor = isDark ? colors.primaryDark : colors.primary;
-  const backgroundColor = '#FFFFFF';
+  const backgroundColor = isDark ? colors.backgroundDark : colors.background;
 
   const handleClientSelect = () => {
     console.log('User selected Client role');
@@ -39,12 +39,10 @@ export default function RoleSelectScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Image
-            source={resolveImageSource(require('@/assets/images/209de818-f148-4db8-af50-74bbb0761bc7.png'))}
+            source={resolveImageSource(require('@/assets/images/69d714db-da7a-4d1b-93ed-6a7746771724.png'))}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { color: textColor }]}>Welcome to NO-COLLAR</Text>
-          <Text style={[styles.slogan, { color: primaryColor }]}>Kazi iko</Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -113,18 +111,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     marginBottom: -22,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  slogan: {
-    fontSize: 18,
-    fontStyle: 'italic',
-    marginBottom: 8,
-    textAlign: 'center',
   },
   cardsContainer: {
     gap: 10,

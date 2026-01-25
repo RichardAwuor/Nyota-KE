@@ -2,33 +2,33 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  // Deep blue and beige theme
-  background: '#F5F5DC', // Beige
-  backgroundDark: '#0D47A1', // Deep Blue
+  // NO-COLLAR brand colors - Blue and Golden Yellow
+  background: '#FFFFFF', // White background
+  backgroundDark: '#1A1A1A', // Dark background
   
   text: '#2C2C2C',
-  textDark: '#F5F5DC', // Beige text on dark
+  textDark: '#F5F5F5', // Light text on dark
   
   textSecondary: '#6B6B6B',
-  textSecondaryDark: '#D4C5A0', // Lighter beige for secondary text
+  textSecondaryDark: '#B0B0B0', // Lighter gray for secondary text
   
-  primary: '#0D47A1', // Deep Blue
-  primaryDark: '#1565C0', // Lighter deep blue for dark mode
+  primary: '#1E5BA8', // NO-COLLAR Blue
+  primaryDark: '#2B6BBF', // Lighter blue for dark mode
   
-  secondary: '#8B7355', // Brown/tan accent
-  secondaryDark: '#A68A6A',
+  secondary: '#D4A843', // NO-COLLAR Golden Yellow
+  secondaryDark: '#E5B954',
   
-  accent: '#FFD700', // Gold accent
-  accentDark: '#FFC300',
+  accent: '#D4A843', // Golden Yellow accent
+  accentDark: '#E5B954',
   
-  card: '#FFFFFF',
-  cardDark: '#1565C0', // Lighter blue for cards in dark mode
+  card: '#F8F9FA',
+  cardDark: '#2A2A2A', // Dark card background
   
-  highlight: '#E8EAF6', // Light blue highlight
-  highlightDark: '#1A237E', // Darker blue highlight
+  highlight: '#E8F0F8', // Light blue highlight
+  highlightDark: '#2A3F5F', // Darker blue highlight
   
-  border: '#D4C5A0',
-  borderDark: '#5C7FB8',
+  border: '#E0E0E0',
+  borderDark: '#404040',
   
   error: '#DC3545',
   success: '#28A745',

@@ -5,13 +5,13 @@
     "slug": "NO-COLLAR",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/209de818-f148-4db8-af50-74bbb0761bc7.png",
+    "icon": "./assets/images/69d714db-da7a-4d1b-93ed-6a7746771724.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/209de818-f148-4db8-af50-74bbb0761bc7.png",
+      "image": "./assets/images/69d714db-da7a-4d1b-93ed-6a7746771724.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F5F5DC"
+      "backgroundColor": "#D4A843"
     },
     "ios": {
       "supportsTablet": true,
@@ -22,14 +22,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/209de818-f148-4db8-af50-74bbb0761bc7.png",
-        "backgroundColor": "#F5F5DC"
+        "foregroundImage": "./assets/images/69d714db-da7a-4d1b-93ed-6a7746771724.png",
+        "backgroundColor": "#D4A843"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.nocollar.app"
     },
     "web": {
-      "favicon": "./assets/images/209de818-f148-4db8-af50-74bbb0761bc7.png",
+      "favicon": "./assets/images/69d714db-da7a-4d1b-93ed-6a7746771724.png",
       "bundler": "metro"
     },
     "plugins": [
