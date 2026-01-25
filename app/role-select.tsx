@@ -22,6 +22,7 @@ export default function RoleSelectScreen() {
   const textSecondaryColor = isDark ? colors.textSecondaryDark : colors.textSecondary;
   const cardColor = isDark ? colors.cardDark : colors.card;
   const primaryColor = isDark ? colors.primaryDark : colors.primary;
+  const backgroundColor = isDark ? '#2A2A2A' : '#F5F5F5';
 
   const handleClientSelect = () => {
     console.log('User selected Client role');
@@ -34,7 +35,7 @@ export default function RoleSelectScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <View style={styles.content}>
         <View style={styles.header}>
           <Image
@@ -56,7 +57,7 @@ export default function RoleSelectScreen() {
               <IconSymbol
                 ios_icon_name="person.fill"
                 android_material_icon_name="person"
-                size={40}
+                size={20}
                 color="#FFFFFF"
               />
             </View>
@@ -75,7 +76,7 @@ export default function RoleSelectScreen() {
               <IconSymbol
                 ios_icon_name="briefcase.fill"
                 android_material_icon_name="work"
-                size={40}
+                size={20}
                 color="#FFFFFF"
               />
             </View>
@@ -93,7 +94,6 @@ export default function RoleSelectScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cardsContainer: {
-    gap: 20,
+    gap: 10,
   },
   card: {
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -135,20 +135,20 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
     marginBottom: 8,
   },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 12,
     textAlign: 'center',
   },
 });
