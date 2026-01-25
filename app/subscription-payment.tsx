@@ -8,12 +8,14 @@ import {
   useColorScheme,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
+import { apiCall, BACKEND_URL } from '@/utils/api';
 
 export default function SubscriptionPaymentScreen() {
   const router = useRouter();
@@ -22,6 +24,9 @@ export default function SubscriptionPaymentScreen() {
   const { user, provider, setProvider } = useUser();
 
   const [loading, setLoading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [checkoutRequestId, setCheckoutRequestId] = useState('');
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   console.log('Subscription payment screen loaded');
 
@@ -31,6 +36,36 @@ export default function SubscriptionPaymentScreen() {
   const cardColor = isDark ? colors.cardDark : colors.card;
   const accentColor = isDark ? colors.accentDark : colors.accent;
 
+
+
+  const formatPhoneNumber = (phone: string) => {
+    // Remove any non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // If starts with 0, replace with 254
+    if (cleaned.startsWith('0')) {
+      return '254' + cleaned.substring(1);
+    }
+    
+    // If starts with +254, remove the +
+    if (cleaned.startsWith('254')) {
+      return cleaned;
+    }
+    
+    // If starts with 7 or 1, add 254
+    if (cleaned.startsWith('7') || cleaned.startsWith('1')) {
+      return '254' + cleaned;
+    }
+    
+    return cleaned;
+  };
+
+  const validatePhoneNumber = (phone: string) => {
+    const formatted = formatPhoneNumber(phone);
+    // Kenyan phone numbers: 254XXXXXXXXX (12 digits total)
+    return formatted.length === 12 && formatted.startsWith('254');
+  };
+
   const handlePayment = async () => {
     console.log('Initiating M-Pesa payment for provider:', provider?.id);
 
@@ -39,37 +74,142 @@ export default function SubscriptionPaymentScreen() {
       return;
     }
 
+    if (!phoneNumber.trim()) {
+      Alert.alert('Error', 'Please enter your M-Pesa phone number');
+      return;
+    }
+
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    
+    if (!validatePhoneNumber(phoneNumber)) {
+      Alert.alert(
+        'Invalid Phone Number',
+        'Please enter a valid Kenyan phone number (e.g., 0712345678 or 254712345678)'
+      );
+      return;
+    }
+
     setLoading(true);
 
-    // TODO: Backend Integration - POST /api/subscription/initiate
-    // Body: { providerId, phoneNumber }
-    // Returns: { transactionId, message, ussdPrompt: 'Pay NO-COLLAR Kes 130' }
-    
-    // Mock payment for now
-    setTimeout(() => {
+    try {
+      console.log('Sending payment request to backend:', {
+        providerId: provider.id,
+        phoneNumber: formattedPhone,
+      });
+
+      const data = await apiCall('/api/mpesa/initiate', {
+        method: 'POST',
+        body: JSON.stringify({
+          providerId: provider.id,
+          phoneNumber: formattedPhone,
+        }),
+      });
+
+      console.log('Payment initiation response:', data);
+
+      if (data.checkoutRequestId) {
+        setCheckoutRequestId(data.checkoutRequestId);
+      }
+
       setLoading(false);
-      
+
       Alert.alert(
         'Payment Initiated',
-        'Please check your phone for the M-Pesa prompt to complete payment of KES 130',
+        data.message || 'Please check your phone for the M-Pesa prompt to complete payment of KES 130',
         [
           {
-            text: 'OK',
+            text: 'Check Status',
             onPress: () => {
-              // Mock successful payment
-              if (provider) {
-                setProvider({
-                  ...provider,
-                  subscriptionStatus: 'active',
-                });
+              if (data.checkoutRequestId) {
+                checkPaymentStatus(data.checkoutRequestId);
               }
-              console.log('Payment completed, navigating to home');
-              router.replace('/(tabs)');
             },
           },
         ]
       );
-    }, 1500);
+    } catch (error) {
+      console.error('Payment initiation error:', error);
+      setLoading(false);
+      Alert.alert(
+        'Payment Failed',
+        error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.'
+      );
+    }
+  };
+
+  const checkPaymentStatus = async (requestId: string) => {
+    if (!requestId) {
+      Alert.alert('Error', 'No payment request to check');
+      return;
+    }
+
+    setCheckingStatus(true);
+    console.log('Checking payment status for:', requestId);
+
+    try {
+      const data = await apiCall(`/api/mpesa/status/${requestId}`, {
+        method: 'GET',
+      });
+
+      console.log('Payment status response:', data);
+
+      setCheckingStatus(false);
+
+      const statusText = data.status || 'unknown';
+      
+      if (statusText === 'completed') {
+        // Update provider subscription status
+        if (provider) {
+          setProvider({
+            ...provider,
+            subscriptionStatus: 'active',
+          });
+        }
+
+        Alert.alert(
+          'Payment Successful',
+          `Your subscription is now active! Receipt: ${data.mpesaReceiptNumber || 'N/A'}`,
+          [
+            {
+              text: 'Continue',
+              onPress: () => {
+                console.log('Payment completed, navigating to home');
+                router.replace('/(tabs)');
+              },
+            },
+          ]
+        );
+      } else if (statusText === 'failed') {
+        Alert.alert(
+          'Payment Failed',
+          data.resultDesc || 'The payment was not successful. Please try again.'
+        );
+      } else if (statusText === 'pending') {
+        Alert.alert(
+          'Payment Pending',
+          'The payment is still being processed. Please complete the M-Pesa prompt on your phone.',
+          [
+            {
+              text: 'Check Again',
+              onPress: () => checkPaymentStatus(requestId),
+            },
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Unknown Status', `Payment status: ${statusText}`);
+      }
+    } catch (error) {
+      console.error('Status check error:', error);
+      setCheckingStatus(false);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to check payment status'
+      );
+    }
   };
 
   const handleSkip = () => {
@@ -168,6 +308,24 @@ export default function SubscriptionPaymentScreen() {
           </View>
         </View>
 
+        <View style={[styles.inputContainer, { backgroundColor: cardColor }]}>
+          <IconSymbol
+            ios_icon_name="phone"
+            android_material_icon_name="phone"
+            size={20}
+            color={textColor}
+          />
+          <TextInput
+            style={[styles.input, { color: textColor }]}
+            placeholder="M-Pesa Phone Number (e.g., 0712345678)"
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+            maxLength={15}
+          />
+        </View>
+
         <TouchableOpacity
           style={[styles.button, { backgroundColor: primaryColor }]}
           onPress={handlePayment}
@@ -179,6 +337,22 @@ export default function SubscriptionPaymentScreen() {
             <Text style={styles.buttonText}>Pay with M-Pesa</Text>
           )}
         </TouchableOpacity>
+
+        {checkoutRequestId && (
+          <TouchableOpacity
+            style={[styles.statusButton, { borderColor: primaryColor }]}
+            onPress={() => checkPaymentStatus(checkoutRequestId)}
+            disabled={checkingStatus}
+          >
+            {checkingStatus ? (
+              <ActivityIndicator color={primaryColor} />
+            ) : (
+              <Text style={[styles.statusButtonText, { color: primaryColor }]}>
+                Check Payment Status
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
           <Text style={[styles.skipText, { color: textColor }]}>Skip for now</Text>
@@ -261,15 +435,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
   },
+  inputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+  },
   button: {
     width: '100%',
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   buttonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusButton: {
+    width: '100%',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 2,
+  },
+  statusButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },

@@ -22,7 +22,7 @@ import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 import { SERVICE_CATEGORIES } from '@/constants/data';
-import Constants from 'expo-constants';
+import { apiCall, BACKEND_URL } from '@/utils/api';
 
 // Helper to resolve image sources (handles both local require() and remote URLs)
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
@@ -65,8 +65,6 @@ export default function HomeScreen() {
   const [loadingGigs, setLoadingGigs] = useState(false);
   const [postingGig, setPostingGig] = useState(false);
 
-  const BACKEND_URL = Constants.expoConfig?.extra?.backendUrl;
-
   // Fetch available gigs for providers
   const fetchAvailableGigs = useCallback(async () => {
     if (!provider?.id) return;
@@ -74,21 +72,17 @@ export default function HomeScreen() {
     setLoadingGigs(true);
     try {
       console.log('Fetching available gigs for provider:', provider.id);
-      const response = await fetch(`${BACKEND_URL}/api/gigs/matches/${provider.id}`);
-      const data = await response.json();
+      const data = await apiCall(`/api/gigs/matches/${provider.id}`, {
+        method: 'GET',
+      });
       console.log('Available gigs response:', data);
-
-      if (response.ok) {
-        setAvailableGigs(data);
-      } else {
-        console.error('Failed to fetch gigs:', data);
-      }
+      setAvailableGigs(data);
     } catch (error) {
       console.error('Error fetching gigs:', error);
     } finally {
       setLoadingGigs(false);
     }
-  }, [provider?.id, BACKEND_URL]);
+  }, [provider?.id]);
 
   useEffect(() => {
     if (isProvider && provider?.id && provider?.subscriptionStatus === 'active') {
@@ -137,20 +131,12 @@ export default function HomeScreen() {
 
       console.log('Sending post gig request:', requestBody);
 
-      const response = await fetch(`${BACKEND_URL}/api/gigs`, {
+      const data = await apiCall('/api/gigs', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(requestBody),
       });
 
-      const data = await response.json();
       console.log('Post gig response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to post gig');
-      }
 
       Alert.alert('Success', 'Gig posted successfully!');
       
@@ -181,20 +167,12 @@ export default function HomeScreen() {
     }
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/gigs/${gigId}/accept`, {
+      const data = await apiCall(`/api/gigs/${gigId}/accept`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ providerId: provider.id }),
       });
 
-      const data = await response.json();
       console.log('Accept gig response:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to accept gig');
-      }
 
       Alert.alert('Success', 'Gig accepted successfully!');
       

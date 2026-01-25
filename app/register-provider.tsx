@@ -76,40 +76,68 @@ export default function RegisterProviderScreen() {
 
     setLoading(true);
 
-    // TODO: Backend Integration - POST /api/auth/register-provider
-    // Body: { email, firstName, lastName, gender, dateOfBirth, identityNumber, countyCode, countyNumber, countyName, preferredCommuteDistance, phoneNumber }
-    // Returns: { user: { id, email, userType, providerCode, ... }, message }
-    
-    // Mock registration for now
-    setTimeout(() => {
-      const mockProviderCode = `${selectedCounty.countyCode}${selectedCounty.countyNumber}-0001`;
+    try {
+      const { apiCall } = await import('@/utils/api');
       
-      const mockUser = {
-        id: 'provider-' + Date.now(),
+      // Format date as YYYY-MM-DD for the API
+      const formattedDate = dateOfBirth.toISOString().split('T')[0];
+      
+      const requestBody = {
         email,
-        userType: 'provider' as const,
+        firstName,
+        lastName,
+        gender: gender.charAt(0).toUpperCase() + gender.slice(1), // Capitalize first letter
+        dateOfBirth: formattedDate,
+        identityNumber,
+        county: selectedCounty.countyName,
+        commuteDistance: distance,
+        phoneNumber,
+        services: [], // Empty array for now - can be added later
+        training: [], // Empty array for now - can be added later
+      };
+
+      console.log('Sending provider registration request:', requestBody);
+
+      const response = await apiCall('/api/users/register-provider', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Provider registration response:', response);
+
+      const registeredUser = {
+        id: response.user.id,
+        email: response.user.email,
+        userType: response.user.userType as 'provider',
         firstName,
         lastName,
         county: selectedCounty.countyName,
       };
 
-      const mockProvider = {
-        id: mockUser.id,
-        providerCode: mockProviderCode,
+      const registeredProvider = {
+        id: response.provider.id,
+        providerCode: response.provider.providerCode,
         gender,
         phoneNumber,
-        subscriptionStatus: 'inactive',
+        subscriptionStatus: 'inactive' as const,
         photoUrl: '',
       };
 
-      setUser(mockUser);
-      setProvider(mockProvider);
-      console.log('Provider registered successfully', { user: mockUser, provider: mockProvider });
+      setUser(registeredUser);
+      setProvider(registeredProvider);
+      console.log('Provider registered successfully', { user: registeredUser, provider: registeredProvider });
       setLoading(false);
       
       // Navigate to subscription payment
       router.push('/subscription-payment');
-    }, 1000);
+    } catch (error) {
+      console.error('Provider registration error:', error);
+      setLoading(false);
+      Alert.alert(
+        'Registration Failed',
+        error instanceof Error ? error.message : 'Failed to register. Please try again.'
+      );
+    }
   };
 
   return (

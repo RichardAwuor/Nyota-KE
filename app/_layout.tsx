@@ -17,6 +17,12 @@ import 'react-native-reanimated';
 import { WidgetProvider } from '@/contexts/WidgetContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { useColorScheme, Alert } from 'react-native';
+import Constants from 'expo-constants';
+
+// Log backend URL on app startup
+console.log('=== NO-COLLAR App Starting ===');
+console.log('Backend URL:', Constants.expoConfig?.extra?.backendUrl);
+console.log('==============================');
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();

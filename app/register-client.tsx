@@ -61,27 +61,49 @@ export default function RegisterClientScreen() {
 
     setLoading(true);
 
-    // TODO: Backend Integration - POST /api/auth/register-client
-    // Body: { email, firstName, lastName, organizationType, organizationName?, countyCode, countyNumber, countyName }
-    // Returns: { user: { id, email, userType, firstName, lastName, county... }, message }
-    
-    // Mock registration for now
-    setTimeout(() => {
-      const mockUser = {
-        id: 'client-' + Date.now(),
+    try {
+      const { apiCall } = await import('@/utils/api');
+      
+      const requestBody = {
         email,
-        userType: 'client' as const,
         firstName,
         lastName,
         county: selectedCounty.countyName,
+        isOrganization: organizationType === 'organization',
+        ...(organizationType === 'organization' && organizationName ? { organizationName } : {}),
+      };
+
+      console.log('Sending client registration request:', requestBody);
+
+      const response = await apiCall('/api/users/register-client', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Client registration response:', response);
+
+      const registeredUser = {
+        id: response.user.id,
+        email: response.user.email,
+        userType: response.user.userType as 'client',
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        county: response.user.county,
         organizationName: organizationType === 'organization' ? organizationName : undefined,
       };
 
-      setUser(mockUser);
-      console.log('Client registered successfully', mockUser);
+      setUser(registeredUser);
+      console.log('Client registered successfully', registeredUser);
       setLoading(false);
       router.replace('/(tabs)');
-    }, 1000);
+    } catch (error) {
+      console.error('Client registration error:', error);
+      setLoading(false);
+      Alert.alert(
+        'Registration Failed',
+        error instanceof Error ? error.message : 'Failed to register. Please try again.'
+      );
+    }
   };
 
   return (

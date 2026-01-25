@@ -20,6 +20,7 @@ import { useUser } from '@/contexts/UserContext';
 import { SERVICE_CATEGORIES } from '@/constants/data';
 import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { apiCall } from '@/utils/api';
 
 // Helper to resolve image sources (handles both local require() and remote URLs)
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
@@ -99,20 +100,48 @@ export default function PostGigScreen() {
 
     setLoading(true);
 
-    // TODO: Backend Integration - POST /api/gigs
-    // Body: { clientId, categoryId, serviceDate, serviceTime, address, description, durationDays, durationHours, paymentOffer, preferredGender, latitude, longitude }
-    // Returns: { gig: { id, ... }, message }
+    try {
+      if (!user?.id) {
+        throw new Error('User not found. Please log in again.');
+      }
 
-    setTimeout(() => {
-      console.log('Gig posted successfully');
+      const requestBody = {
+        clientId: user.id,
+        category,
+        serviceDate: serviceDate.toISOString(),
+        serviceTime: timeDisplay,
+        address,
+        description,
+        durationDays: days,
+        durationHours: hours,
+        paymentOffer: payment,
+        ...(preferredGender !== 'any' ? { preferredGender: preferredGender.charAt(0).toUpperCase() + preferredGender.slice(1) } : {}),
+      };
+
+      console.log('Sending post gig request:', requestBody);
+
+      const data = await apiCall('/api/gigs', {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Gig posted successfully:', data);
       setLoading(false);
+      
       Alert.alert('Success', 'Your gig has been posted!', [
         {
           text: 'OK',
           onPress: () => router.back(),
         },
       ]);
-    }, 1000);
+    } catch (error) {
+      console.error('Error posting gig:', error);
+      setLoading(false);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to post gig. Please try again.'
+      );
+    }
   };
 
   return (

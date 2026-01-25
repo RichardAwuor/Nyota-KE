@@ -20,7 +20,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, provider, logout } = useUser();
 
-  console.log('Profile screen (iOS) loaded');
+  console.log('Profile screen loaded (iOS)');
 
   const handleLogout = () => {
     console.log('User logged out');
