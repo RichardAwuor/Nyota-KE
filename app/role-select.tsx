@@ -39,7 +39,8 @@ export default function RoleSelectScreen() {
   // Color definitions
   const welcomeColor = colors.secondary; // Orange like logo
   const sloganColor = colors.primary; // Blue
-  const cardTitleColor = colors.primary; // Blue for Client and Service provider
+  const cardBackgroundColor = colors.primary; // Blue cards
+  const cardTitleColor = colors.secondary; // Orange for Client and Service provider text
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
@@ -56,7 +57,7 @@ export default function RoleSelectScreen() {
 
         <View style={styles.cardsContainer}>
           <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.secondary }]}
+            style={[styles.card, { backgroundColor: cardBackgroundColor }]}
             onPress={handleClientSelect}
             activeOpacity={0.7}
           >
@@ -74,7 +75,7 @@ export default function RoleSelectScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.card, { backgroundColor: colors.secondary }]}
+            style={[styles.card, { backgroundColor: cardBackgroundColor }]}
             onPress={handleProviderSelect}
             activeOpacity={0.7}
           >
