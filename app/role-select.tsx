@@ -99,14 +99,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     marginBottom: 48,
     alignItems: 'center',
   },
   logo: {
-    width: 200,
-    height: 200,
+    width: 300,
+    height: 300,
     marginBottom: 16,
   },
   title: {
@@ -123,6 +124,8 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: 10,
+    width: '100%',
+    alignItems: 'center',
   },
   card: {
     borderRadius: 12,
@@ -133,6 +136,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    width: '70%',
+    maxWidth: 280,
   },
   iconContainer: {
     width: 40,
