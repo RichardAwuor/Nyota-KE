@@ -26,6 +26,7 @@ export default function RegisterProviderScreen() {
   const { setUser, setProvider } = useUser();
 
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>('male');
@@ -58,13 +59,18 @@ export default function RegisterProviderScreen() {
   const handleRegister = async () => {
     console.log('Provider registration initiated', { email, firstName, lastName, gender });
 
-    if (!email || !firstName || !lastName || !identityNumber || !phoneNumber) {
+    if (!email || !confirmEmail || !firstName || !lastName || !identityNumber || !phoneNumber) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
     if (!email.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      Alert.alert('Error', 'Email addresses do not match');
       return;
     }
 
@@ -158,6 +164,18 @@ export default function RegisterProviderScreen() {
             placeholderTextColor={isDark ? '#888' : '#999'}
             value={email}
             onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Text style={[styles.label, { color: textColor }]}>Confirm Email *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+            placeholder="Re-enter your email"
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            value={confirmEmail}
+            onChangeText={setConfirmEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}

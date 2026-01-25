@@ -25,6 +25,7 @@ export default function RegisterClientScreen() {
   const { setUser } = useUser();
 
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [organizationType, setOrganizationType] = useState<'individual' | 'organization'>('individual');
@@ -44,13 +45,18 @@ export default function RegisterClientScreen() {
   const handleRegister = async () => {
     console.log('Client registration initiated', { email, firstName, lastName, organizationType });
 
-    if (!email || !firstName || !lastName) {
+    if (!email || !confirmEmail || !firstName || !lastName) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
     if (!email.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    if (email !== confirmEmail) {
+      Alert.alert('Error', 'Email addresses do not match');
       return;
     }
 
@@ -129,24 +135,16 @@ export default function RegisterClientScreen() {
             autoCorrect={false}
           />
 
-          <Text style={[styles.label, { color: textColor }]}>First Name *</Text>
+          <Text style={[styles.label, { color: textColor }]}>Confirm Email *</Text>
           <TextInput
             style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
-            placeholder="Enter your first name"
+            placeholder="Re-enter your email"
             placeholderTextColor={isDark ? '#888' : '#999'}
-            value={firstName}
-            onChangeText={setFirstName}
-            autoCapitalize="words"
-          />
-
-          <Text style={[styles.label, { color: textColor }]}>Last Name *</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
-            placeholder="Enter your last name"
-            placeholderTextColor={isDark ? '#888' : '#999'}
-            value={lastName}
-            onChangeText={setLastName}
-            autoCapitalize="words"
+            value={confirmEmail}
+            onChangeText={setConfirmEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
 
           <Text style={[styles.label, { color: textColor }]}>Account Type *</Text>
@@ -189,6 +187,26 @@ export default function RegisterClientScreen() {
               />
             </>
           )}
+
+          <Text style={[styles.label, { color: textColor }]}>First Name *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+            placeholder="Enter your first name"
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+
+          <Text style={[styles.label, { color: textColor }]}>Last Name *</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+            placeholder="Enter your last name"
+            placeholderTextColor={isDark ? '#888' : '#999'}
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
 
           <Text style={[styles.label, { color: textColor }]}>County *</Text>
           <View style={[styles.pickerContainer, { backgroundColor: inputBg, borderColor }]}>
