@@ -62,7 +62,7 @@ export default function RoleSelectScreen() {
           >
             <View style={styles.cardContent}>
               <Image
-                source={resolveImageSource(require('@/assets/images/604e0535-56a5-45e5-8158-e50d359ee50b.png'))}
+                source={resolveImageSource(require('@/assets/images/558941e1-fcea-4902-9f7a-1bcb53efb327.png'))}
                 style={styles.cardImage}
                 resizeMode="cover"
               />
@@ -80,7 +80,7 @@ export default function RoleSelectScreen() {
           >
             <View style={styles.cardContent}>
               <Image
-                source={resolveImageSource(require('@/assets/images/30a9442e-2ffc-4dda-802d-cd57460e96e9.png'))}
+                source={resolveImageSource(require('@/assets/images/2b8ad1e4-a7c8-4456-9e1c-59383ed99c73.png'))}
                 style={styles.cardImage}
                 resizeMode="contain"
               />
