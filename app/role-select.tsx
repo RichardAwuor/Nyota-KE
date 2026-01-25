@@ -19,7 +19,6 @@ export default function RoleSelectScreen() {
   const isDark = colorScheme === 'dark';
 
   const textColor = isDark ? colors.textDark : colors.text;
-  const textSecondaryColor = isDark ? colors.textSecondaryDark : colors.textSecondary;
   const backgroundColor = '#FFFFFF'; // Always white background
 
   const handleClientSelect = () => {
@@ -32,6 +31,13 @@ export default function RoleSelectScreen() {
     router.push('/register-provider');
   };
 
+  const welcomeText = 'Welcome to No-Collar';
+  const sloganText = 'KAZI IKO';
+  const clientText = 'Client';
+  const providerText = 'Service provider';
+  const clientDescription = 'Post gigs and hire service providers';
+  const providerDescription = 'Find gigs and earn money';
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor }]}>
       <View style={styles.content}>
@@ -41,6 +47,8 @@ export default function RoleSelectScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
+          <Text style={[styles.welcomeText, { color: textColor }]}>{welcomeText}</Text>
+          <Text style={[styles.sloganText, { color: textColor }]}>{sloganText}</Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -58,9 +66,9 @@ export default function RoleSelectScreen() {
                   color={colors.secondary}
                 />
               </View>
-              <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>I need services</Text>
+              <Text style={[styles.cardTitle, { color: colors.secondary }]}>{clientText}</Text>
               <Text style={[styles.cardDescription, { color: '#FFFFFF' }]}>
-                Post gigs and hire service providers
+                {clientDescription}
               </Text>
             </View>
           </TouchableOpacity>
@@ -79,9 +87,9 @@ export default function RoleSelectScreen() {
                   color={colors.secondary}
                 />
               </View>
-              <Text style={[styles.cardTitle, { color: '#FFFFFF' }]}>I provide services</Text>
+              <Text style={[styles.cardTitle, { color: colors.secondary }]}>{providerText}</Text>
               <Text style={[styles.cardDescription, { color: '#FFFFFF' }]}>
-                Find gigs and earn money
+                {providerDescription}
               </Text>
             </View>
           </TouchableOpacity>
@@ -102,13 +110,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    marginBottom: 10,
+    marginBottom: 20,
     alignItems: 'center',
   },
   logo: {
     width: 300,
     height: 300,
     marginBottom: -22,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  sloganText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   cardsContainer: {
     gap: 10,
