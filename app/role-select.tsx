@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    marginBottom: 10,
+    marginBottom: -9,
     alignItems: 'center',
   },
   logo: {
