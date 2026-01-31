@@ -38,8 +38,8 @@ export default function SplashScreen() {
     return () => clearTimeout(timer);
   }, [navigateBasedOnUser]);
 
-  const primaryColor = isDark ? colors.primaryDark : colors.primary;
   const orangeColor = '#FF6B35';
+  const blackColor = '#000000';
   const appName = 'Collarless';
   const sloganText = 'Kazi iko';
 
@@ -52,7 +52,7 @@ export default function SplashScreen() {
           resizeMode="contain"
         />
         <Text style={[styles.title, { color: orangeColor }]}>{appName}</Text>
-        <Text style={[styles.slogan, { color: primaryColor }]}>{sloganText}</Text>
+        <Text style={[styles.slogan, { color: blackColor }]}>{sloganText}</Text>
       </View>
     </View>
   );
