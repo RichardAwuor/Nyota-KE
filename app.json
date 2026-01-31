@@ -1,4 +1,3 @@
-
 {
   "expo": {
     "name": "Collarless",
@@ -43,7 +42,7 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://e5wgeerrct2a9skgegkashy679v959nx.app.specular.dev"
+      "backendUrl": "https://9rs686wkexp8cbxgtddvuzrpcv4x9xn8.app.specular.dev"
     }
   }
 }
