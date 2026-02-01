@@ -26,14 +26,22 @@ async function getMpesaAccessToken(): Promise<string> {
     });
 
     return response.data.access_token;
-  } catch (error) {
-    throw new Error('Failed to get M-Pesa access token');
+  } catch (error: any) {
+    const errorMsg = error.response?.data || error.message;
+    throw new Error(`Failed to get M-Pesa access token: ${JSON.stringify(errorMsg)}`);
   }
 }
 
-// Generate timestamp
+// Generate timestamp in format YYYYMMDDHHmmss
 function getTimestamp(): string {
-  return new Date().toISOString().replace(/[:-]/g, '').split('.')[0];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const date = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}${month}${date}${hours}${minutes}${seconds}`;
 }
 
 // Generate password for M-Pesa
@@ -92,16 +100,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         return reply.status(400).send({ error: 'Provider not found' });
       }
 
-      // Get M-Pesa access token
-      const accessToken = await getMpesaAccessToken();
-
-      const timestamp = getTimestamp();
-      // Production passkey from Safaricom M-Pesa portal
-      // TODO: Update with the production passkey provided by Safaricom
-      const passkey = 'bfb279f9aa9bdbcf158e97dd1a503b6064e3ea09955a6db5d8fd72e22f5d76e8';
-      const password = generatePassword(SHORTCODE, passkey, timestamp);
-
-      // Format phone number: remove + if present and ensure it starts with country code
+      // Format and validate phone number: must be exactly 12 digits starting with 254
       let formattedPhone = phoneNumber.replace(/\D/g, '');
       if (!formattedPhone.startsWith('254')) {
         if (formattedPhone.startsWith('0')) {
@@ -111,30 +110,90 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         }
       }
 
+      // Validate phone number format: exactly 12 digits, starts with 254
+      if (!/^254\d{9}$/.test(formattedPhone)) {
+        app.logger.warn({ phoneNumber, formattedPhone }, 'Invalid phone number format');
+        return reply.status(400).send({ error: 'Invalid phone number. Must be in format 254XXXXXXXXX' });
+      }
+
+      // Get M-Pesa access token
+      let accessToken: string;
+      try {
+        accessToken = await getMpesaAccessToken();
+      } catch (tokenError: any) {
+        app.logger.error({ err: tokenError, providerId }, 'Failed to get M-Pesa access token');
+        return reply.status(500).send({ error: 'Failed to authenticate with M-Pesa' });
+      }
+
+      const timestamp = getTimestamp();
+      // Production passkey from Safaricom M-Pesa portal
+      // IMPORTANT: This must be the actual production passkey for shortcode 6803513
+      // If not available, contact Safaricom to get the Lipa Na M-Pesa Online Passkey
+      const passkey = process.env.MPESA_PASSKEY || '6803513';
+      const password = generatePassword(SHORTCODE, passkey, timestamp);
+
       const merchantRequestId = `MR-${Date.now()}-${providerId}`;
+      const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/mpesa/callback`;
+
+      // Build STK Push request
+      const stkPayload = {
+        BusinessShortCode: SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: SUBSCRIPTION_AMOUNT,
+        PartyA: formattedPhone,
+        PartyB: SHORTCODE,
+        PhoneNumber: formattedPhone,
+        CallBackURL: callbackUrl,
+        AccountReference: `Collarless-${providerId}`,
+        TransactionDesc: 'Collarless Monthly Subscription',
+      };
+
+      app.logger.debug(
+        {
+          businessShortCode: SHORTCODE,
+          timestamp,
+          amount: SUBSCRIPTION_AMOUNT,
+          partyA: formattedPhone,
+          callbackUrl,
+          passKeyLength: passkey.length,
+        },
+        'STK Push request details'
+      );
 
       // Initiate STK Push
-      const stkResponse = await axios.post(
-        STK_PUSH_URL,
-        {
-          BusinessShortCode: SHORTCODE,
-          Password: password,
-          Timestamp: timestamp,
-          TransactionType: 'CustomerPayBillOnline',
-          Amount: SUBSCRIPTION_AMOUNT,
-          PartyA: formattedPhone,
-          PartyB: SHORTCODE,
-          PhoneNumber: formattedPhone,
-          CallBackURL: `${process.env.CALLBACK_URL || 'http://localhost:3000'}/api/mpesa/callback`,
-          AccountReference: `Collarless-${providerId}`,
-          TransactionDesc: 'Collarless Monthly Subscription',
-        },
-        {
+      let stkResponse;
+      try {
+        stkResponse = await axios.post(STK_PUSH_URL, stkPayload, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
-        }
-      );
+        });
+      } catch (stkError: any) {
+        const errorStatus = stkError.response?.status;
+        const errorData = stkError.response?.data;
+        const errorMessage = errorData?.errorMessage || errorData?.message || stkError.message;
+
+        app.logger.error(
+          {
+            err: stkError,
+            providerId,
+            phoneNumber: formattedPhone,
+            httpStatus: errorStatus,
+            mpesaError: errorData,
+            requestPayload: stkPayload,
+          },
+          'M-Pesa STK Push API returned error'
+        );
+
+        const errorDetail = errorData?.errorMessage || errorData?.message || JSON.stringify(errorData) || stkError.message;
+        return reply.status(errorStatus || 400).send({
+          error: `M-Pesa API Error: ${errorDetail}`,
+          details: errorData,
+        });
+      }
 
       const checkoutRequestId = stkResponse.data.CheckoutRequestID;
 
@@ -148,7 +207,10 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         status: 'pending',
       });
 
-      app.logger.info({ providerId, checkoutRequestId }, 'STK Push initiated successfully');
+      app.logger.info(
+        { providerId, checkoutRequestId, phoneNumber: formattedPhone, amount: SUBSCRIPTION_AMOUNT },
+        'STK Push initiated successfully'
+      );
 
       return {
         checkoutRequestId,
@@ -156,10 +218,10 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       };
     } catch (error: any) {
       app.logger.error(
-        { err: error, providerId, errorMessage: error.response?.data || error.message },
-        'Failed to initiate M-Pesa payment'
+        { err: error, providerId, errorMessage: error.message },
+        'Unexpected error during M-Pesa payment initiation'
       );
-      throw error;
+      return reply.status(500).send({ error: 'Failed to initiate payment. Please try again.' });
     }
   });
 
