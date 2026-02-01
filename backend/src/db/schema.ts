@@ -72,6 +72,10 @@ export const gigs = pgTable('gigs', {
   paymentOffer: integer('payment_offer').notNull(), // in KES
   status: text('status').notNull().default('open'), // 'open', 'accepted', 'completed', 'cancelled'
   acceptedProviderId: uuid('accepted_provider_id').references(() => serviceProviders.id, { onDelete: 'set null' }),
+  selectedProviderId: uuid('selected_provider_id').references(() => serviceProviders.id, { onDelete: 'set null' }),
+  selectionExpiresAt: timestamp('selection_expires_at', { withTimezone: true }),
+  broadcastAt: timestamp('broadcast_at', { withTimezone: true }),
+  directOfferSentAt: timestamp('direct_offer_sent_at', { withTimezone: true }),
   latitude: decimal('latitude', { precision: 10, scale: 8 }),
   longitude: decimal('longitude', { precision: 11, scale: 8 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -114,6 +118,15 @@ export const mpesaTransactions = pgTable('mpesa_transactions', {
   status: text('status').notNull().default('pending'), // 'pending', 'completed', 'failed'
   resultDesc: text('result_desc'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+// Gig Broadcasts table (tracks which providers were sent broadcast offers)
+export const gigBroadcasts = pgTable('gig_broadcasts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  gigId: uuid('gig_id').notNull().references(() => gigs.id, { onDelete: 'cascade' }),
+  providerId: uuid('provider_id').notNull().references(() => serviceProviders.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'), // 'pending', 'accepted', 'declined'
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
 // Relations
@@ -161,7 +174,12 @@ export const gigsRelations = relations(gigs, ({ one, many }) => ({
     fields: [gigs.acceptedProviderId],
     references: [serviceProviders.id],
   }),
+  selectedProvider: one(serviceProviders, {
+    fields: [gigs.selectedProviderId],
+    references: [serviceProviders.id],
+  }),
   reviews: many(reviews),
+  broadcasts: many(gigBroadcasts),
 }));
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
@@ -182,6 +200,17 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 export const mpesaTransactionsRelations = relations(mpesaTransactions, ({ one }) => ({
   provider: one(serviceProviders, {
     fields: [mpesaTransactions.providerId],
+    references: [serviceProviders.id],
+  }),
+}));
+
+export const gigBroadcastsRelations = relations(gigBroadcasts, ({ one }) => ({
+  gig: one(gigs, {
+    fields: [gigBroadcasts.gigId],
+    references: [gigs.id],
+  }),
+  provider: one(serviceProviders, {
+    fields: [gigBroadcasts.providerId],
     references: [serviceProviders.id],
   }),
 }));
