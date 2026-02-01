@@ -19,13 +19,37 @@ export default function HomeScreen() {
   const fetchGigs = useCallback(async () => {
     console.log('Fetching gigs for user:', user?.userType);
     
-    // TODO: Backend Integration
-    // For clients: GET /api/gigs/my-gigs?clientId={user.id}
-    // For providers: GET /api/gigs/available?providerId={user.id}
-    
-    // Mock data for now
-    setGigs([]);
-  }, [user?.userType]);
+    if (!user?.id) {
+      console.log('No user ID available');
+      return;
+    }
+
+    try {
+      const { apiCall } = await import('@/utils/api');
+      
+      let data;
+      if (user.userType === 'client') {
+        // Fetch gigs posted by this client
+        console.log('Fetching client gigs for:', user.id);
+        data = await apiCall(`/api/gigs/client/${user.id}`, {
+          method: 'GET',
+        });
+      } else if (user.userType === 'provider' && provider?.id) {
+        // Fetch matching gigs for this provider
+        console.log('Fetching provider gigs for:', provider.id);
+        data = await apiCall(`/api/gigs/matches/${provider.id}`, {
+          method: 'GET',
+        });
+      }
+      
+      console.log('Gigs fetched successfully:', data);
+      setGigs(data || []);
+    } catch (error) {
+      console.error('Error fetching gigs:', error);
+      // Don't show error to user, just log it
+      setGigs([]);
+    }
+  }, [user?.userType, user?.id, provider?.id]);
 
   useEffect(() => {
     if (user) {
@@ -108,10 +132,50 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View>
-              {gigs.map((gig, index) => (
-                <View key={index} style={[styles.gigCard, { backgroundColor: theme.dark ? colors.cardDark : colors.card }]}>
-                  <Text style={[styles.gigTitle, { color: theme.colors.text }]}>{gig.title}</Text>
-                </View>
+              {gigs.map((gig) => (
+                <TouchableOpacity 
+                  key={gig.id} 
+                  style={[styles.gigCard, { backgroundColor: theme.dark ? colors.cardDark : colors.card }]}
+                  onPress={() => console.log('Gig tapped:', gig.id)}
+                >
+                  <View style={styles.gigHeader}>
+                    <Text style={[styles.gigCategory, { color: colors.primary }]}>{gig.category}</Text>
+                    <View style={[styles.statusBadge, { 
+                      backgroundColor: gig.status === 'open' ? colors.success : 
+                                      gig.status === 'accepted' ? colors.accent : 
+                                      colors.border 
+                    }]}>
+                      <Text style={styles.statusText}>{gig.status}</Text>
+                    </View>
+                  </View>
+                  <Text style={[styles.gigDescription, { color: theme.colors.text }]} numberOfLines={2}>
+                    {gig.description}
+                  </Text>
+                  <View style={styles.gigFooter}>
+                    <View style={styles.gigInfo}>
+                      <IconSymbol
+                        ios_icon_name="calendar"
+                        android_material_icon_name="calendar-today"
+                        size={16}
+                        color={theme.dark ? '#98989D' : '#666'}
+                      />
+                      <Text style={[styles.gigInfoText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                        {new Date(gig.serviceDate).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <View style={styles.gigInfo}>
+                      <IconSymbol
+                        ios_icon_name="banknote"
+                        android_material_icon_name="attach-money"
+                        size={16}
+                        color={theme.dark ? '#98989D' : '#666'}
+                      />
+                      <Text style={[styles.gigInfoText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                        KES {gig.paymentOffer}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           )}
@@ -194,10 +258,61 @@ export default function HomeScreen() {
           </View>
         ) : (
           <View>
-            {gigs.map((gig, index) => (
-              <View key={index} style={[styles.gigCard, { backgroundColor: theme.dark ? colors.cardDark : colors.card }]}>
-                <Text style={[styles.gigTitle, { color: theme.colors.text }]}>{gig.title}</Text>
-              </View>
+            {gigs.map((gig) => (
+              <TouchableOpacity 
+                key={gig.id} 
+                style={[styles.gigCard, { backgroundColor: theme.dark ? colors.cardDark : colors.card }]}
+                onPress={() => console.log('Gig tapped:', gig.id)}
+              >
+                <View style={styles.gigHeader}>
+                  <Text style={[styles.gigCategory, { color: colors.primary }]}>{gig.category}</Text>
+                  <View style={[styles.statusBadge, { 
+                    backgroundColor: gig.status === 'open' ? colors.success : 
+                                    gig.status === 'accepted' ? colors.accent : 
+                                    colors.border 
+                  }]}>
+                    <Text style={styles.statusText}>{gig.status}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.gigDescription, { color: theme.colors.text }]} numberOfLines={2}>
+                  {gig.description}
+                </Text>
+                <View style={styles.gigFooter}>
+                  <View style={styles.gigInfo}>
+                    <IconSymbol
+                      ios_icon_name="calendar"
+                      android_material_icon_name="calendar-today"
+                      size={16}
+                      color={theme.dark ? '#98989D' : '#666'}
+                    />
+                    <Text style={[styles.gigInfoText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                      {new Date(gig.serviceDate).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <View style={styles.gigInfo}>
+                    <IconSymbol
+                      ios_icon_name="banknote"
+                      android_material_icon_name="attach-money"
+                      size={16}
+                      color={theme.dark ? '#98989D' : '#666'}
+                    />
+                    <Text style={[styles.gigInfoText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                      KES {gig.paymentOffer}
+                    </Text>
+                  </View>
+                  <View style={styles.gigInfo}>
+                    <IconSymbol
+                      ios_icon_name="location"
+                      android_material_icon_name="location-on"
+                      size={16}
+                      color={theme.dark ? '#98989D' : '#666'}
+                    />
+                    <Text style={[styles.gigInfoText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                      {gig.address}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -287,10 +402,50 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  gigTitle: {
+  gigHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  gigCategory: {
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: '#000',
+    textTransform: 'capitalize',
+  },
+  gigDescription: {
+    fontSize: 14,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  gigFooter: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  gigInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  gigInfoText: {
+    fontSize: 12,
   },
   title: {
     fontSize: 24,

@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,64 @@ import { colors } from '@/styles/commonStyles';
 import { useUser } from '@/contexts/UserContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { apiCall, BACKEND_URL } from '@/utils/api';
+
+// Custom Modal Component for cross-platform compatibility
+function ConfirmModal({
+  visible,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  showCancel = true,
+}: {
+  visible: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  showCancel?: boolean;
+}) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const bgColor = isDark ? colors.backgroundDark : colors.background;
+  const textColor = isDark ? colors.textDark : colors.text;
+  const primaryColor = isDark ? colors.primaryDark : colors.primary;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <View style={modalStyles.overlay}>
+        <View style={[modalStyles.container, { backgroundColor: bgColor }]}>
+          <Text style={[modalStyles.title, { color: textColor }]}>{title}</Text>
+          <Text style={[modalStyles.message, { color: textColor }]}>{message}</Text>
+          <View style={modalStyles.buttons}>
+            {showCancel && onCancel && (
+              <TouchableOpacity
+                style={[modalStyles.button, modalStyles.cancelButton]}
+                onPress={onCancel}
+              >
+                <Text style={[modalStyles.buttonText, { color: textColor }]}>
+                  {cancelText}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[modalStyles.button, { backgroundColor: primaryColor }]}
+              onPress={onConfirm}
+            >
+              <Text style={[modalStyles.buttonText, { color: '#FFFFFF' }]}>
+                {confirmText}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 export default function SubscriptionPaymentScreen() {
   const router = useRouter();
@@ -27,6 +86,15 @@ export default function SubscriptionPaymentScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [checkoutRequestId, setCheckoutRequestId] = useState('');
   const [checkingStatus, setCheckingStatus] = useState(false);
+  
+  // Modal state
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalMessage, setModalMessage] = useState('');
+  const [modalOnConfirm, setModalOnConfirm] = useState<() => void>(() => () => {});
+  const [modalOnCancel, setModalOnCancel] = useState<(() => void) | undefined>(undefined);
+  const [modalShowCancel, setModalShowCancel] = useState(true);
+  const [modalConfirmText, setModalConfirmText] = useState('OK');
 
   console.log('Subscription payment screen loaded');
 
@@ -35,6 +103,25 @@ export default function SubscriptionPaymentScreen() {
   const primaryColor = isDark ? colors.primaryDark : colors.primary;
   const cardColor = isDark ? colors.cardDark : colors.card;
   const accentColor = isDark ? colors.accentDark : colors.accent;
+
+  const showModal = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    options?: {
+      onCancel?: () => void;
+      showCancel?: boolean;
+      confirmText?: string;
+    }
+  ) => {
+    setModalTitle(title);
+    setModalMessage(message);
+    setModalOnConfirm(() => onConfirm);
+    setModalOnCancel(options?.onCancel ? () => options.onCancel : undefined);
+    setModalShowCancel(options?.showCancel ?? true);
+    setModalConfirmText(options?.confirmText || 'OK');
+    setModalVisible(true);
+  };
 
 
 
@@ -92,10 +179,11 @@ export default function SubscriptionPaymentScreen() {
     setLoading(true);
 
     try {
-      console.log('Sending payment request to backend:', {
-        providerId: provider.id,
-        phoneNumber: formattedPhone,
-      });
+      console.log('=== M-Pesa Payment Initiation ===');
+      console.log('Provider ID:', provider.id);
+      console.log('Phone Number (formatted):', formattedPhone);
+      console.log('Amount: KES 130');
+      console.log('Merchant: Collarless (6803513)');
 
       const data = await apiCall('/api/mpesa/initiate', {
         method: 'POST',
@@ -105,7 +193,10 @@ export default function SubscriptionPaymentScreen() {
         }),
       });
 
-      console.log('Payment initiation response:', data);
+      console.log('=== Payment Response ===');
+      console.log('Success:', !!data.checkoutRequestId);
+      console.log('Checkout Request ID:', data.checkoutRequestId);
+      console.log('Message:', data.message);
 
       if (data.checkoutRequestId) {
         setCheckoutRequestId(data.checkoutRequestId);
@@ -113,27 +204,46 @@ export default function SubscriptionPaymentScreen() {
 
       setLoading(false);
 
-      Alert.alert(
+      showModal(
         'Payment Initiated',
-        data.message || 'Please check your phone for the M-Pesa prompt to complete payment of KES 130',
-        [
-          {
-            text: 'Check Status',
-            onPress: () => {
-              if (data.checkoutRequestId) {
-                checkPaymentStatus(data.checkoutRequestId);
-              }
-            },
-          },
-        ]
+        data.message || 'Please check your phone for the M-Pesa prompt to complete payment of KES 130. Enter your M-Pesa PIN to confirm.',
+        () => {
+          setModalVisible(false);
+          if (data.checkoutRequestId) {
+            checkPaymentStatus(data.checkoutRequestId);
+          }
+        },
+        {
+          confirmText: 'Check Status',
+          showCancel: false,
+        }
       );
-    } catch (error) {
-      console.error('Payment initiation error:', error);
+    } catch (error: any) {
+      console.error('=== Payment Error ===');
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error details:', error);
+      
       setLoading(false);
-      Alert.alert(
-        'Payment Failed',
-        error instanceof Error ? error.message : 'Failed to initiate payment. Please try again.'
-      );
+      
+      let errorMessage = 'Failed to initiate payment. Please try again.';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific error types
+      if (error?.message?.includes('400')) {
+        errorMessage = 'Invalid request. Please check your phone number and try again.';
+      } else if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        errorMessage = 'Authentication failed. Please contact support.';
+      } else if (error?.message?.includes('Network')) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      showModal('Payment Failed', errorMessage, () => setModalVisible(false), {
+        showCancel: false,
+      });
     }
   };
 
@@ -166,74 +276,98 @@ export default function SubscriptionPaymentScreen() {
           });
         }
 
-        Alert.alert(
-          'Payment Successful',
-          `Your subscription is now active! Receipt: ${data.mpesaReceiptNumber || 'N/A'}`,
-          [
-            {
-              text: 'Continue',
-              onPress: () => {
-                console.log('Payment completed, navigating to home');
-                router.replace('/(tabs)');
-              },
-            },
-          ]
+        const receiptText = data.mpesaReceiptNumber 
+          ? `Receipt: ${data.mpesaReceiptNumber}` 
+          : '';
+        
+        showModal(
+          'Payment Successful! 🎉',
+          `Your subscription is now active! ${receiptText}\n\nYou can now view and accept gigs.`,
+          () => {
+            setModalVisible(false);
+            console.log('Payment completed, navigating to Take-A-Gig screen');
+            router.replace('/(tabs)');
+          },
+          {
+            confirmText: 'Continue to Gigs',
+            showCancel: false,
+          }
         );
       } else if (statusText === 'failed') {
-        Alert.alert(
+        showModal(
           'Payment Failed',
-          data.resultDesc || 'The payment was not successful. Please try again.'
+          data.resultDesc || 'The payment was not successful. Please try again.',
+          () => setModalVisible(false),
+          {
+            showCancel: false,
+          }
         );
       } else if (statusText === 'pending') {
-        Alert.alert(
+        showModal(
           'Payment Pending',
-          'The payment is still being processed. Please complete the M-Pesa prompt on your phone.',
-          [
-            {
-              text: 'Check Again',
-              onPress: () => checkPaymentStatus(requestId),
-            },
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-          ]
+          'The payment is still being processed. Please complete the M-Pesa prompt on your phone and enter your PIN.',
+          () => {
+            setModalVisible(false);
+            checkPaymentStatus(requestId);
+          },
+          {
+            confirmText: 'Check Again',
+            onCancel: () => setModalVisible(false),
+            showCancel: true,
+          }
         );
       } else {
-        Alert.alert('Unknown Status', `Payment status: ${statusText}`);
+        showModal(
+          'Unknown Status',
+          `Payment status: ${statusText}`,
+          () => setModalVisible(false),
+          {
+            showCancel: false,
+          }
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Status check error:', error);
       setCheckingStatus(false);
-      Alert.alert(
+      showModal(
         'Error',
-        error instanceof Error ? error.message : 'Failed to check payment status'
+        error instanceof Error ? error.message : 'Failed to check payment status',
+        () => setModalVisible(false),
+        {
+          showCancel: false,
+        }
       );
     }
   };
 
   const handleSkip = () => {
     console.log('User skipped payment');
-    Alert.alert(
-      'Skip Payment',
+    showModal(
+      'Skip Payment?',
       'You need an active subscription to view and accept gigs. You can subscribe later from your profile.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Skip Anyway',
-          onPress: () => {
-            router.replace('/(tabs)');
-          },
-        },
-      ]
+      () => {
+        setModalVisible(false);
+        router.replace('/(tabs)');
+      },
+      {
+        confirmText: 'Skip Anyway',
+        onCancel: () => setModalVisible(false),
+        showCancel: true,
+      }
     );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <ConfirmModal
+        visible={modalVisible}
+        title={modalTitle}
+        message={modalMessage}
+        onConfirm={modalOnConfirm}
+        onCancel={modalOnCancel}
+        confirmText={modalConfirmText}
+        showCancel={modalShowCancel}
+      />
       <View style={styles.content}>
         <View style={[styles.iconContainer, { backgroundColor: accentColor }]}>
           <IconSymbol
@@ -359,12 +493,64 @@ export default function SubscriptionPaymentScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.merchantInfo, { color: textColor }]}>
-          Merchant: NO-COLLAR (6803513)
+          Merchant: Collarless (6803513)
         </Text>
       </View>
     </SafeAreaView>
   );
 }
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  container: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: 16,
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  buttons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  button: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#888',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
