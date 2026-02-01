@@ -4,16 +4,16 @@ import axios from 'axios';
 import * as schema from '../db/schema.js';
 import type { App } from '../index.js';
 
-// M-Pesa credentials
-const CONSUMER_KEY = 'CGGfZP1dyOzrxLQGCIalVp0JkN12c78OEaxIX2BtkYVZP6Is';
-const CONSUMER_SECRET = 'OFGJRn0yApZButSxpf8GzHU6iJwI18szv39IImgfTAu285utfzKjFTGhRlAFyiFA';
+// M-Pesa credentials (Production)
+const CONSUMER_KEY = 'I3ffKPoz27FVGzQYeM5cp74HeGkVb9ctfdsxwIg1JBwz661r';
+const CONSUMER_SECRET = 'Ad5sWMAoXWycUAAZmThAPTxOqyqpVdgOj4HgA9sVh5JvquHF95B3e6UiCAXO434a';
 const SHORTCODE = '6803513';
 const SUBSCRIPTION_AMOUNT = 130;
 
-// M-Pesa API URLs
-const AUTH_URL = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-const STK_PUSH_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-const QUERY_URL = 'https://sandbox.safaricom.co.ke/mpesa/stkpushquery/v1/query';
+// M-Pesa API URLs (Production)
+const AUTH_URL = 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
+const STK_PUSH_URL = 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
+const QUERY_URL = 'https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query';
 
 // Get M-Pesa access token
 async function getMpesaAccessToken(): Promise<string> {
@@ -96,7 +96,8 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       const accessToken = await getMpesaAccessToken();
 
       const timestamp = getTimestamp();
-      // Using shortcode as passkey for sandbox
+      // Production passkey from Safaricom M-Pesa portal
+      // TODO: Update with the production passkey provided by Safaricom
       const passkey = 'bfb279f9aa9bdbcf158e97dd1a503b6064e3ea09955a6db5d8fd72e22f5d76e8';
       const password = generatePassword(SHORTCODE, passkey, timestamp);
 
@@ -125,8 +126,8 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
           PartyB: SHORTCODE,
           PhoneNumber: formattedPhone,
           CallBackURL: `${process.env.CALLBACK_URL || 'http://localhost:3000'}/api/mpesa/callback`,
-          AccountReference: `NO-COLLAR-${providerId}`,
-          TransactionDesc: 'NO-COLLAR Monthly Subscription',
+          AccountReference: `Collarless-${providerId}`,
+          TransactionDesc: 'Collarless Monthly Subscription',
         },
         {
           headers: {
