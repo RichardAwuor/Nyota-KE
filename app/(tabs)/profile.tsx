@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Image, ImageSourcePropType, ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
@@ -56,44 +56,9 @@ export default function ProfileScreen() {
   const isClient = user?.userType === 'client';
   const isSubscribed = provider?.subscriptionStatus === 'active';
 
-  // Fetch recent gig and matched providers for clients
-  useEffect(() => {
-    if (isClient && user?.id) {
-      fetchRecentGigAndMatches();
-    }
-  }, [isClient, user?.id]);
+  const fetchRecentGigAndMatches = useCallback(async () => {
+    if (!isClient || !user?.id) return;
 
-  // Poll for gig status updates when there's an active gig
-  useEffect(() => {
-    if (isClient && recentGig && (recentGig.status === 'open' || recentGig.selectedProviderId)) {
-      const pollInterval = setInterval(() => {
-        console.log('Polling for gig status updates');
-        fetchRecentGigAndMatches();
-      }, 5000); // Poll every 5 seconds
-
-      return () => clearInterval(pollInterval);
-    }
-  }, [isClient, recentGig?.id, recentGig?.status, recentGig?.selectedProviderId, fetchRecentGigAndMatches]);
-
-  // Timer countdown
-  useEffect(() => {
-    if (timeRemaining > 0 && recentGig && !recentGig.selectedProviderId && !recentGig.acceptedProviderId) {
-      const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleBroadcastGig();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [timeRemaining, recentGig]);
-
-  const fetchRecentGigAndMatches = async () => {
     console.log('Fetching recent gig and matched providers');
     setLoadingMatches(true);
     
@@ -132,7 +97,49 @@ export default function ProfileScreen() {
     } finally {
       setLoadingMatches(false);
     }
-  };
+  }, [isClient, user?.id]);
+
+  // Fetch recent gig and matched providers for clients on mount and when user changes
+  useEffect(() => {
+    if (isClient && user?.id) {
+      console.log('Initial fetch of gig data');
+      fetchRecentGigAndMatches();
+    }
+  }, [isClient, user?.id, fetchRecentGigAndMatches]);
+
+  // Poll for gig status updates when there's an active gig
+  useEffect(() => {
+    if (isClient && recentGig && (recentGig.status === 'open' || recentGig.selectedProviderId)) {
+      console.log('Starting polling for gig status updates');
+      const pollInterval = setInterval(() => {
+        console.log('Polling for gig status updates');
+        fetchRecentGigAndMatches();
+      }, 5000); // Poll every 5 seconds
+
+      return () => {
+        console.log('Stopping polling');
+        clearInterval(pollInterval);
+      };
+    }
+  }, [isClient, recentGig?.id, recentGig?.status, recentGig?.selectedProviderId, fetchRecentGigAndMatches]);
+
+  // Timer countdown
+  useEffect(() => {
+    if (timeRemaining > 0 && recentGig && !recentGig.selectedProviderId && !recentGig.acceptedProviderId) {
+      const timer = setInterval(() => {
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleBroadcastGig();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [timeRemaining, recentGig]);
 
   const handleSelectProvider = (provider: MatchedProvider) => {
     console.log('Provider selected for confirmation:', provider.providerCode);
@@ -787,5 +794,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 40,
   },
 });
