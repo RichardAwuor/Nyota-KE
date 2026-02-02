@@ -258,7 +258,7 @@ export default function SubscriptionPaymentScreen() {
       if (errorMessage.includes('configuration incomplete') || errorMessage.includes('contact support')) {
         showModal(
           'Payment System Unavailable',
-          'The M-Pesa payment system is currently being configured. Please contact NO-COLLAR support or try again later.',
+          'The M-Pesa payment system is currently being configured. Please contact Collarless support or try again later.',
           () => setModalVisible(false),
           {
             showCancel: false,
