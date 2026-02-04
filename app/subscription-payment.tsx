@@ -192,16 +192,20 @@ export default function SubscriptionPaymentScreen() {
       console.log('Phone Number (formatted):', formattedPhone);
       console.log('Amount: KES 130');
       console.log('Merchant: Collarless (6803513)');
+      console.log('Backend URL:', BACKEND_URL);
+
+      const requestPayload = {
+        providerId: provider.id,
+        phoneNumber: formattedPhone,
+      };
+      console.log('Request Payload:', JSON.stringify(requestPayload, null, 2));
 
       const response = await fetch(`${BACKEND_URL}/api/mpesa/initiate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          providerId: provider.id,
-          phoneNumber: formattedPhone,
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       console.log('=== M-Pesa API Response ===');
@@ -209,7 +213,7 @@ export default function SubscriptionPaymentScreen() {
       console.log('Status Text:', response.statusText);
 
       const data = await response.json();
-      console.log('Response Data:', data);
+      console.log('Response Data:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
         // Handle error response from backend
