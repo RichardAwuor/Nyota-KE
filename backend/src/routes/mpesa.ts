@@ -4,16 +4,16 @@ import axios from 'axios';
 import * as schema from '../db/schema.js';
 import type { App } from '../index.js';
 
-// M-Pesa credentials (Production)
-const CONSUMER_KEY = 'I3ffKPoz27FVGzQYeM5cp74HeGkVb9ctfdsxwIg1JBwz661r';
-const CONSUMER_SECRET = 'Ad5sWMAoXWycUAAZmThAPTxOqyqpVdgOj4HgA9sVh5JvquHF95B3e6UiCAXO434a';
+// M-Pesa C2B credentials (Production)
+const CONSUMER_KEY = 'bZHFT3P37yZRT6W06xI6hbaqiR3n2A887tmi9T01ZwbjX2Ab';
+const CONSUMER_SECRET = '5bBgJVgT6EO5pGuAHBG9FZxbaau7ky5LCkcYQFx8DxuFvmbOVOMAgynkZAsg6xhz';
 const SHORTCODE = '6803513';
 const SUBSCRIPTION_AMOUNT = 130;
 
-// M-Pesa API URLs (Production)
+// M-Pesa API URLs (Production - C2B)
 const AUTH_URL = 'https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-const STK_PUSH_URL = 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
-const QUERY_URL = 'https://api.safaricom.co.ke/mpesa/stkpushquery/v1/query';
+const C2B_REGISTER_URL = 'https://api.safaricom.co.ke/mpesa/c2b/v1/registerurl';
+const C2B_SIMULATE_URL = 'https://api.safaricom.co.ke/mpesa/c2b/v1/simulate';
 
 // Get M-Pesa access token
 async function getMpesaAccessToken(): Promise<string> {
@@ -125,69 +125,47 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         return reply.status(500).send({ error: 'Failed to authenticate with M-Pesa' });
       }
 
-      const timestamp = getTimestamp();
-
-      // Validate passkey is configured
-      const passkey = process.env.MPESA_PASSKEY;
-      if (!passkey) {
-        app.logger.error({ providerId }, 'M-Pesa passkey not configured');
-        return reply.status(500).send({ error: 'M-Pesa configuration incomplete. Please contact support.' });
-      }
-
-      const password = generatePassword(SHORTCODE, passkey, timestamp);
-
       const merchantRequestId = `MR-${Date.now()}-${providerId}`;
       const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/mpesa/callback`;
 
-      // Build STK Push request - matching M-Pesa API exact format
-      const stkPayload = {
-        BusinessShortCode: SHORTCODE,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline',
+      // Build C2B Simulate request
+      const c2bPayload = {
+        ShortCode: SHORTCODE,
+        CommandID: 'CustomerPayBillOnline',
         Amount: SUBSCRIPTION_AMOUNT.toString(),
-        PartyA: formattedPhone,
-        PartyB: SHORTCODE,
-        PhoneNumber: formattedPhone,
-        CallBackURL: callbackUrl,
-        AccountReference: `Collarless-${providerId}`,
-        TransactionDesc: 'Collarless Monthly Subscription',
+        Msisdn: formattedPhone,
+        BillRefNumber: `Collarless-${providerId}`,
       };
 
       app.logger.info(
         {
-          businessShortCode: SHORTCODE,
-          timestamp,
+          shortCode: SHORTCODE,
           amount: SUBSCRIPTION_AMOUNT,
-          partyA: formattedPhone,
-          partyB: SHORTCODE,
-          transactionType: 'CustomerPayBillOnline',
-          callbackUrl,
-          accountReference: `Collarless-${providerId}`,
-          passwordLength: password.length,
-          passkeyLength: passkey.length,
+          msisdn: formattedPhone,
+          commandId: 'CustomerPayBillOnline',
+          billRefNumber: `Collarless-${providerId}`,
         },
-        'M-Pesa STK Push request prepared'
+        'M-Pesa C2B request prepared'
       );
 
       app.logger.debug(
-        { payload: stkPayload },
-        'STK Push full payload (for debugging)'
+        { payload: c2bPayload },
+        'C2B full payload (for debugging)'
       );
 
-      // Initiate STK Push
-      let stkResponse;
+      // Initiate C2B Simulate
+      let c2bResponse;
       try {
         app.logger.info(
           {
-            url: STK_PUSH_URL,
-            payloadKeys: Object.keys(stkPayload),
-            amount: stkPayload.Amount,
+            url: C2B_SIMULATE_URL,
+            payloadKeys: Object.keys(c2bPayload),
+            amount: c2bPayload.Amount,
           },
-          'Sending STK Push request to M-Pesa'
+          'Sending C2B Simulate request to M-Pesa'
         );
 
-        stkResponse = await axios.post(STK_PUSH_URL, stkPayload, {
+        c2bResponse = await axios.post(C2B_SIMULATE_URL, c2bPayload, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -196,21 +174,21 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
 
         app.logger.info(
           {
-            status: stkResponse.status,
-            responseCode: stkResponse.data?.ResponseCode,
-            merchantRequestId: stkResponse.data?.MerchantRequestID,
-            checkoutRequestId: stkResponse.data?.CheckoutRequestID,
+            status: c2bResponse.status,
+            responseCode: c2bResponse.data?.ResponseCode,
+            responseDescription: c2bResponse.data?.ResponseDescription,
+            transactionId: c2bResponse.data?.TransactionID,
           },
-          'M-Pesa STK Push response received'
+          'M-Pesa C2B response received'
         );
-      } catch (stkError: any) {
-        const errorStatus = stkError.response?.status;
-        const errorData = stkError.response?.data;
-        const errorMessage = errorData?.errorMessage || errorData?.message || errorData?.ErrorMessage || stkError.message;
+      } catch (c2bError: any) {
+        const errorStatus = c2bError.response?.status;
+        const errorData = c2bError.response?.data;
+        const errorMessage = errorData?.errorMessage || errorData?.message || errorData?.ResponseDescription || c2bError.message;
 
         app.logger.error(
           {
-            err: stkError,
+            err: c2bError,
             providerId,
             phoneNumber: formattedPhone,
             httpStatus: errorStatus,
@@ -218,20 +196,14 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
             mpesaErrorMessage: errorMessage,
             mpesaFullError: errorData,
             requestPayload: {
-              BusinessShortCode: stkPayload.BusinessShortCode,
-              Timestamp: stkPayload.Timestamp,
-              Amount: stkPayload.Amount,
-              PartyA: stkPayload.PartyA,
-              PartyB: stkPayload.PartyB,
-              TransactionType: stkPayload.TransactionType,
-              PhoneNumber: stkPayload.PhoneNumber,
-              AccountReference: stkPayload.AccountReference,
-              TransactionDesc: stkPayload.TransactionDesc,
-              CallBackURL: stkPayload.CallBackURL,
-              // Password intentionally omitted from logs for security
+              ShortCode: c2bPayload.ShortCode,
+              CommandID: c2bPayload.CommandID,
+              Amount: c2bPayload.Amount,
+              Msisdn: c2bPayload.Msisdn,
+              BillRefNumber: c2bPayload.BillRefNumber,
             },
           },
-          'M-Pesa STK Push API request failed'
+          'M-Pesa C2B API request failed'
         );
 
         const errorDetail = errorMessage || JSON.stringify(errorData) || 'Unknown error';
@@ -244,34 +216,34 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         });
       }
 
-      const checkoutRequestId = stkResponse.data.CheckoutRequestID;
+      const transactionId = c2bResponse.data.TransactionID;
 
-      if (!checkoutRequestId) {
+      if (!transactionId) {
         app.logger.error(
-          { responseData: stkResponse.data },
-          'M-Pesa response missing CheckoutRequestID'
+          { responseData: c2bResponse.data },
+          'M-Pesa response missing TransactionID'
         );
-        return reply.status(500).send({ error: 'Invalid response from M-Pesa: missing CheckoutRequestID' });
+        return reply.status(500).send({ error: 'Invalid response from M-Pesa: missing TransactionID' });
       }
 
       // Store transaction record
       await app.db.insert(schema.mpesaTransactions).values({
         providerId,
         merchantRequestId,
-        checkoutRequestId,
+        checkoutRequestId: transactionId,
         phoneNumber: formattedPhone,
         amount: SUBSCRIPTION_AMOUNT,
         status: 'pending',
       });
 
       app.logger.info(
-        { providerId, checkoutRequestId, phoneNumber: formattedPhone, amount: SUBSCRIPTION_AMOUNT },
-        'STK Push initiated successfully'
+        { providerId, transactionId, phoneNumber: formattedPhone, amount: SUBSCRIPTION_AMOUNT },
+        'C2B payment initiated successfully'
       );
 
       return {
-        checkoutRequestId,
-        message: 'STK Push sent successfully. Please enter your M-Pesa PIN on your phone.',
+        checkoutRequestId: transactionId,
+        message: 'Payment request sent. Please complete the M-Pesa transaction on your phone.',
       };
     } catch (error: any) {
       app.logger.error(
