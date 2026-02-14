@@ -2,7 +2,7 @@
   "expo": {
     "name": "Collarless",
     "slug": "collarless",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "orientation": "portrait",
     "icon": "./assets/images/e552cdd3-9483-4da6-b178-06617f4609bc.png",
     "userInterfaceStyle": "automatic",
@@ -27,7 +27,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.simphoni.collarless",
-      "versionCode": 17
+      "versionCode": 18
     },
     "web": {
       "favicon": "./assets/images/e552cdd3-9483-4da6-b178-06617f4609bc.png",

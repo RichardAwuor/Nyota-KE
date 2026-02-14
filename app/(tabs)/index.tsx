@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -66,6 +66,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
+  const isMountedRef = useRef(true);
 
   const textColor = isDark ? colors.textDark : colors.text;
   const textSecondaryColor = isDark ? colors.textSecondaryDark : colors.textSecondary;
@@ -101,9 +102,17 @@ export default function HomeScreen() {
 
   console.log('Home screen loaded');
 
+  // Set mounted ref
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Fetch available gigs for providers
   const fetchAvailableGigs = useCallback(async () => {
-    if (!provider?.id) return;
+    if (!provider?.id || !isMountedRef.current) return;
 
     setLoadingGigs(true);
     try {
@@ -112,11 +121,18 @@ export default function HomeScreen() {
         method: 'GET',
       });
       console.log('Available gigs response:', data);
-      setAvailableGigs(data);
+      if (isMountedRef.current) {
+        setAvailableGigs(data);
+      }
     } catch (error) {
       console.error('Error fetching gigs:', error);
+      if (isMountedRef.current) {
+        setAvailableGigs([]);
+      }
     } finally {
-      setLoadingGigs(false);
+      if (isMountedRef.current) {
+        setLoadingGigs(false);
+      }
     }
   }, [provider?.id]);
 
@@ -144,7 +160,9 @@ export default function HomeScreen() {
   const categoryPlaceholder = category || 'Select service category';
 
   const showMessage = (title: string, message: string, isError: boolean = false) => {
-    setMessageModal({ visible: true, title, message, isError });
+    if (isMountedRef.current) {
+      setMessageModal({ visible: true, title, message, isError });
+    }
   };
 
   const handlePostGig = async () => {
@@ -208,23 +226,29 @@ export default function HomeScreen() {
 
       console.log('Post gig response:', data);
 
-      showMessage('Success', 'Gig posted successfully!', false);
-      
-      // Reset form
-      setCategory('');
-      setServiceDate(new Date());
-      setServiceTime(new Date());
-      setAddress('');
-      setDescription('');
-      setDurationDays('0');
-      setDurationHours('1');
-      setPreferredGender('any');
-      setPaymentOffer('');
+      if (isMountedRef.current) {
+        showMessage('Success', 'Gig posted successfully!', false);
+        
+        // Reset form
+        setCategory('');
+        setServiceDate(new Date());
+        setServiceTime(new Date());
+        setAddress('');
+        setDescription('');
+        setDurationDays('0');
+        setDurationHours('1');
+        setPreferredGender('any');
+        setPaymentOffer('');
+      }
     } catch (error) {
       console.error('Error posting gig:', error);
-      showMessage('Error', error instanceof Error ? error.message : 'Failed to post gig. Please try again.', true);
+      if (isMountedRef.current) {
+        showMessage('Error', error instanceof Error ? error.message : 'Failed to post gig. Please try again.', true);
+      }
     } finally {
-      setPostingGig(false);
+      if (isMountedRef.current) {
+        setPostingGig(false);
+      }
     }
   };
 
@@ -244,13 +268,17 @@ export default function HomeScreen() {
 
       console.log('Accept gig response:', data);
 
-      showMessage('Success', 'Gig accepted successfully!', false);
-      
-      // Refresh available gigs
-      fetchAvailableGigs();
+      if (isMountedRef.current) {
+        showMessage('Success', 'Gig accepted successfully!', false);
+        
+        // Refresh available gigs
+        fetchAvailableGigs();
+      }
     } catch (error) {
       console.error('Error accepting gig:', error);
-      showMessage('Error', error instanceof Error ? error.message : 'Failed to accept gig. Please try again.', true);
+      if (isMountedRef.current) {
+        showMessage('Error', error instanceof Error ? error.message : 'Failed to accept gig. Please try again.', true);
+      }
     }
   };
 
@@ -366,7 +394,7 @@ export default function HomeScreen() {
                 display="default"
                 onChange={(event, selectedDate) => {
                   setShowDatePicker(false);
-                  if (selectedDate) {
+                  if (selectedDate && isMountedRef.current) {
                     setServiceDate(selectedDate);
                     console.log('Service date selected:', selectedDate);
                   }
@@ -399,7 +427,7 @@ export default function HomeScreen() {
                 display="default"
                 onChange={(event, selectedTime) => {
                   setShowTimePicker(false);
-                  if (selectedTime) {
+                  if (selectedTime && isMountedRef.current) {
                     setServiceTime(selectedTime);
                     console.log('Service time selected:', selectedTime);
                   }
@@ -551,7 +579,11 @@ export default function HomeScreen() {
           title={messageModal.title}
           message={messageModal.message}
           isError={messageModal.isError}
-          onClose={() => setMessageModal({ visible: false, title: '', message: '', isError: false })}
+          onClose={() => {
+            if (isMountedRef.current) {
+              setMessageModal({ visible: false, title: '', message: '', isError: false });
+            }
+          }}
         />
       </SafeAreaView>
     );
@@ -666,7 +698,11 @@ export default function HomeScreen() {
           title={messageModal.title}
           message={messageModal.message}
           isError={messageModal.isError}
-          onClose={() => setMessageModal({ visible: false, title: '', message: '', isError: false })}
+          onClose={() => {
+            if (isMountedRef.current) {
+              setMessageModal({ visible: false, title: '', message: '', isError: false });
+            }
+          }}
         />
       </SafeAreaView>
     );
