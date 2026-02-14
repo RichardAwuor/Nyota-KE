@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Collarless",
@@ -8,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/71c943a8-642c-48a0-a3c6-37711fd3543c.png",
+      "image": "./assets/images/d8e096f0-ba53-407d-a0bb-f8d17139c41e.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -38,7 +39,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "Collarless",
+    "scheme": "collarless",
     "experiments": {
       "typedRoutes": true
     },
