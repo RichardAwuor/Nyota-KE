@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Collarless",
-    "slug": "collarless",
+    "slug": "Collarless",
     "version": "1.0.12",
     "orientation": "portrait",
     "icon": "./assets/images/e552cdd3-9483-4da6-b178-06617f4609bc.png",
@@ -38,7 +38,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "collarless",
+    "scheme": "Collarless",
     "experiments": {
       "typedRoutes": true
     },

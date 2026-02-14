@@ -1,11 +1,18 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, Image, ImageSourcePropType } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useUser } from '@/contexts/UserContext';
 import { useRouter } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
+
+// Helper to resolve image sources (handles both local require() and remote URLs)
+function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
+  if (!source) return { uri: '' };
+  if (typeof source === 'string') return { uri: source };
+  return source as ImageSourcePropType;
+}
 
 interface DirectOffer {
   gigId: string;
@@ -218,6 +225,14 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <View style={styles.logoHeader}>
+          <Image
+            source={resolveImageSource(require('@/assets/images/ff5e9bb7-eb66-4c9d-ba1f-de2beda534e1.png'))}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
         <View style={styles.header}>
           <Text style={[styles.greeting, { color: theme.colors.text }]}>
             Hello, {user.firstName}!
@@ -325,6 +340,14 @@ export default function HomeScreen() {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
+      <View style={styles.logoHeader}>
+        <Image
+          source={resolveImageSource(require('@/assets/images/ff5e9bb7-eb66-4c9d-ba1f-de2beda534e1.png'))}
+          style={styles.logo}
+          resizeMode="contain"
+        />
+      </View>
+
       <View style={styles.header}>
         <Text style={[styles.greeting, { color: theme.colors.text }]}>
           Hello, {user.firstName}!
@@ -589,6 +612,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 100,
+  },
+  logoHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logo: {
+    width: 100,
+    height: 100,
   },
   header: {
     marginBottom: 24,

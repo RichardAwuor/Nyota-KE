@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   View,
@@ -20,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { Href } from 'expo-router';
+import { colors } from '@/styles/commonStyles';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -97,8 +99,6 @@ export default function FloatingTabBar({
   const handleTabPress = (route: Href) => {
     router.push(route);
   };
-
-  // Remove unnecessary tabBarStyle animation to prevent flickering
 
   const tabWidthPercent = ((100 / tabs.length) - 1).toFixed(2);
 
@@ -186,13 +186,13 @@ export default function FloatingTabBar({
                       android_material_icon_name={tab.icon}
                       ios_icon_name={tab.icon}
                       size={24}
-                      color={isActive ? theme.colors.primary : (theme.dark ? '#98989D' : '#000000')}
+                      color={isActive ? colors.primary : (theme.dark ? '#98989D' : '#000000')}
                     />
                     <Text
                       style={[
                         styles.tabLabel,
                         { color: theme.dark ? '#98989D' : '#8E8E93' },
-                        isActive && { color: theme.colors.primary, fontWeight: '600' },
+                        isActive && { color: colors.primary, fontWeight: '600' },
                       ]}
                     >
                       {tab.label}
