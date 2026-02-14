@@ -339,7 +339,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.logoHeader}>
           <Image
-            source={resolveImageSource(require('@/assets/images/e552cdd3-9483-4da6-b178-06617f4609bc.png'))}
+            source={resolveImageSource(require('@/assets/images/5f49e934-ff57-4afc-8f25-a70466c61855.png'))}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -348,7 +348,7 @@ export default function ProfileScreen() {
         <View style={[styles.header, { backgroundColor: theme.dark ? colors.cardDark : colors.card }]}>
           <View style={styles.avatarImageContainer}>
             <Image
-              source={resolveImageSource(require('@/assets/images/e552cdd3-9483-4da6-b178-06617f4609bc.png'))}
+              source={resolveImageSource(require('@/assets/images/5f49e934-ff57-4afc-8f25-a70466c61855.png'))}
               style={styles.avatarImage}
               resizeMode="contain"
             />

@@ -199,7 +199,7 @@ export default function PostGigScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.logoHeader}>
             <Image
-              source={resolveImageSource(require('@/assets/images/a02530b3-0745-4b2a-9792-a81a3be12d74.png'))}
+              source={resolveImageSource(require('@/assets/images/5f49e934-ff57-4afc-8f25-a70466c61855.png'))}
               style={styles.logo}
               resizeMode="contain"
             />

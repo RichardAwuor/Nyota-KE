@@ -284,7 +284,7 @@ export default function HomeScreen() {
         <ScrollView style={[styles.container, { backgroundColor: bgColor }]} contentContainerStyle={styles.scrollContent}>
           <View style={styles.logoHeader}>
             <Image
-              source={resolveImageSource(require('@/assets/images/963994c6-6633-489a-a184-e59b208e1a68.png'))}
+              source={resolveImageSource(require('@/assets/images/5f49e934-ff57-4afc-8f25-a70466c61855.png'))}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -613,7 +613,7 @@ export default function HomeScreen() {
         <ScrollView style={[styles.container, { backgroundColor: bgColor }]} contentContainerStyle={styles.scrollContent}>
           <View style={styles.logoHeader}>
             <Image
-              source={resolveImageSource(require('@/assets/images/963994c6-6633-489a-a184-e59b208e1a68.png'))}
+              source={resolveImageSource(require('@/assets/images/5f49e934-ff57-4afc-8f25-a70466c61855.png'))}
               style={styles.logo}
               resizeMode="contain"
             />
