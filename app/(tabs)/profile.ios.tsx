@@ -324,7 +324,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.logoHeader}>
           <Image
-            source={require('@/assets/images/a02530b3-0745-4b2a-9792-a81a3be12d74.png')}
+            source={require('@/assets/images/e5ba27fb-676c-43fc-89f4-e37936a130d9.png')}
             style={styles.appLogo}
           />
         </View>
