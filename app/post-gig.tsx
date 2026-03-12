@@ -109,42 +109,61 @@ export default function PostGigScreen() {
   };
 
   const handlePostGig = async () => {
-    console.log('Posting gig', { category, serviceDate, address, paymentOffer });
-
-    if (!category) {
-      showError('Error', 'Please select a service category');
-      return;
-    }
-
-    if (!address || address.length > 30) {
-      showError('Error', 'Address must be between 1 and 30 characters');
-      return;
-    }
-
-    if (!description || description.length > 160) {
-      showError('Error', 'Description must be between 1 and 160 characters');
-      return;
-    }
-
-    const payment = parseInt(paymentOffer, 10);
-    if (isNaN(payment) || payment < 1) {
-      showError('Error', 'Please enter a valid payment amount');
-      return;
-    }
-
-    const days = parseInt(durationDays, 10);
-    const hours = parseInt(durationHours, 10);
-    if (isNaN(days) || isNaN(hours) || (days === 0 && hours === 0)) {
-      showError('Error', 'Duration must be at least 1 hour');
-      return;
-    }
-
-    setLoading(true);
+    console.log('Post gig button pressed');
+    console.log('Current state:', { 
+      category, 
+      address, 
+      description, 
+      paymentOffer, 
+      durationDays, 
+      durationHours,
+      serviceDate: serviceDate.toISOString(),
+      serviceTime: timeDisplay
+    });
 
     try {
-      if (!user?.id) {
-        throw new Error('User not found. Please log in again.');
+      // Validation
+      if (!category) {
+        console.log('Validation failed: No category');
+        showError('Error', 'Please select a service category');
+        return;
       }
+
+      if (!address || address.length > 30) {
+        console.log('Validation failed: Invalid address');
+        showError('Error', 'Address must be between 1 and 30 characters');
+        return;
+      }
+
+      if (!description || description.length > 160) {
+        console.log('Validation failed: Invalid description');
+        showError('Error', 'Description must be between 1 and 160 characters');
+        return;
+      }
+
+      const payment = parseInt(paymentOffer, 10);
+      if (isNaN(payment) || payment < 1) {
+        console.log('Validation failed: Invalid payment');
+        showError('Error', 'Please enter a valid payment amount');
+        return;
+      }
+
+      const days = parseInt(durationDays, 10);
+      const hours = parseInt(durationHours, 10);
+      if (isNaN(days) || isNaN(hours) || (days === 0 && hours === 0)) {
+        console.log('Validation failed: Invalid duration');
+        showError('Error', 'Duration must be at least 1 hour');
+        return;
+      }
+
+      if (!user?.id) {
+        console.log('Validation failed: No user ID');
+        showError('Error', 'User not found. Please log in again.');
+        return;
+      }
+
+      console.log('All validations passed, starting API call');
+      setLoading(true);
 
       const requestBody = {
         clientId: user.id,
@@ -159,7 +178,7 @@ export default function PostGigScreen() {
         ...(preferredGender !== 'any' ? { preferredGender: preferredGender.charAt(0).toUpperCase() + preferredGender.slice(1) } : {}),
       };
 
-      console.log('Sending post gig request:', requestBody);
+      console.log('Sending post gig request:', JSON.stringify(requestBody, null, 2));
 
       const data = await apiCall<{ id: string }>('/api/gigs', {
         method: 'POST',
@@ -167,16 +186,25 @@ export default function PostGigScreen() {
       });
 
       console.log('Gig posted successfully:', data);
+      
+      // Update loading state before navigation
       setLoading(false);
       
-      // Navigate to profile - the profile screen will fetch the most recent gig automatically
-      // Using setTimeout to ensure state is fully updated before navigation
+      // Show success message
+      showError('Success', 'Gig posted successfully! View it in your profile.');
+      
+      // Navigate to profile after a short delay to allow user to see success message
       setTimeout(() => {
         console.log('Navigating to profile after gig post');
-        router.replace('/(tabs)/profile');
-      }, 100);
+        try {
+          router.replace('/(tabs)/profile');
+        } catch (navError) {
+          console.error('Navigation error:', navError);
+        }
+      }, 1500);
     } catch (error) {
-      console.error('Error posting gig:', error);
+      console.error('Error in handlePostGig:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       setLoading(false);
       showError(
         'Error',
@@ -303,10 +331,21 @@ export default function PostGigScreen() {
               mode="date"
               display="default"
               onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
+                console.log('DatePicker onChange event:', event.type, selectedDate);
+                // On Android, always close the picker
+                if (Platform.OS === 'android') {
+                  setShowDatePicker(false);
+                }
+                // Only update date if user didn't cancel
+                if (event.type === 'set' && selectedDate) {
                   setServiceDate(selectedDate);
                   console.log('Service date selected:', selectedDate);
+                  // On iOS, close picker after selection
+                  if (Platform.OS === 'ios') {
+                    setShowDatePicker(false);
+                  }
+                } else if (event.type === 'dismissed') {
+                  console.log('Date picker dismissed');
                 }
               }}
               minimumDate={new Date()}
@@ -336,10 +375,21 @@ export default function PostGigScreen() {
               mode="time"
               display="default"
               onChange={(event, selectedTime) => {
-                setShowTimePicker(false);
-                if (selectedTime) {
+                console.log('TimePicker onChange event:', event.type, selectedTime);
+                // On Android, always close the picker
+                if (Platform.OS === 'android') {
+                  setShowTimePicker(false);
+                }
+                // Only update time if user didn't cancel
+                if (event.type === 'set' && selectedTime) {
                   setServiceTime(selectedTime);
                   console.log('Service time selected:', selectedTime);
+                  // On iOS, close picker after selection
+                  if (Platform.OS === 'ios') {
+                    setShowTimePicker(false);
+                  }
+                } else if (event.type === 'dismissed') {
+                  console.log('Time picker dismissed');
                 }
               }}
             />

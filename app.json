@@ -1,8 +1,7 @@
-
 {
   "expo": {
     "name": "Nyota-KE",
-    "slug": "nyota",
+    "slug": "nyota-ke",
     "version": "1.0.20",
     "orientation": "portrait",
     "icon": "./assets/images/8ef275bc-8f51-4955-80a7-99df5ae572b7.png",
@@ -39,7 +38,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "nyota-ke",
+    "scheme": "nyotake",
     "experiments": {
       "typedRoutes": true
     },

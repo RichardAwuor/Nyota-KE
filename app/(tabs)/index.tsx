@@ -166,44 +166,63 @@ export default function HomeScreen() {
   };
 
   const handlePostGig = async () => {
-    console.log('Posting gig', { category, serviceDate, address, paymentOffer });
-
-    if (!category) {
-      showMessage('Error', 'Please select a service category', true);
-      return;
-    }
-
-    if (!address || address.length > 30) {
-      showMessage('Error', 'Address must be between 1 and 30 characters', true);
-      return;
-    }
-
-    if (!description || description.length > 160) {
-      showMessage('Error', 'Description must be between 1 and 160 characters', true);
-      return;
-    }
-
-    const payment = parseInt(paymentOffer, 10);
-    if (isNaN(payment) || payment < 1) {
-      showMessage('Error', 'Please enter a valid payment amount', true);
-      return;
-    }
-
-    const days = parseInt(durationDays, 10);
-    const hours = parseInt(durationHours, 10);
-    if (isNaN(days) || isNaN(hours) || (days === 0 && hours === 0)) {
-      showMessage('Error', 'Duration must be at least 1 hour', true);
-      return;
-    }
-
-    if (!user?.id) {
-      showMessage('Error', 'User not found. Please log in again.', true);
-      return;
-    }
-
-    setPostingGig(true);
+    console.log('Post gig button pressed from home tab');
+    console.log('Current state:', { 
+      category, 
+      address, 
+      description, 
+      paymentOffer, 
+      durationDays, 
+      durationHours,
+      serviceDate: serviceDate.toISOString(),
+      serviceTime: timeDisplay,
+      userId: user?.id
+    });
 
     try {
+      // Validation
+      if (!category) {
+        console.log('Validation failed: No category');
+        showMessage('Error', 'Please select a service category', true);
+        return;
+      }
+
+      if (!address || address.length > 30) {
+        console.log('Validation failed: Invalid address');
+        showMessage('Error', 'Address must be between 1 and 30 characters', true);
+        return;
+      }
+
+      if (!description || description.length > 160) {
+        console.log('Validation failed: Invalid description');
+        showMessage('Error', 'Description must be between 1 and 160 characters', true);
+        return;
+      }
+
+      const payment = parseInt(paymentOffer, 10);
+      if (isNaN(payment) || payment < 1) {
+        console.log('Validation failed: Invalid payment');
+        showMessage('Error', 'Please enter a valid payment amount', true);
+        return;
+      }
+
+      const days = parseInt(durationDays, 10);
+      const hours = parseInt(durationHours, 10);
+      if (isNaN(days) || isNaN(hours) || (days === 0 && hours === 0)) {
+        console.log('Validation failed: Invalid duration');
+        showMessage('Error', 'Duration must be at least 1 hour', true);
+        return;
+      }
+
+      if (!user?.id) {
+        console.log('Validation failed: No user ID');
+        showMessage('Error', 'User not found. Please log in again.', true);
+        return;
+      }
+
+      console.log('All validations passed, starting API call');
+      setPostingGig(true);
+
       const requestBody = {
         clientId: user.id,
         category,
@@ -217,7 +236,7 @@ export default function HomeScreen() {
         ...(preferredGender !== 'any' ? { preferredGender: preferredGender.charAt(0).toUpperCase() + preferredGender.slice(1) } : {}),
       };
 
-      console.log('Sending post gig request:', requestBody);
+      console.log('Sending post gig request:', JSON.stringify(requestBody, null, 2));
 
       const data = await apiCall('/api/gigs', {
         method: 'POST',
@@ -241,7 +260,8 @@ export default function HomeScreen() {
         setPaymentOffer('');
       }
     } catch (error) {
-      console.error('Error posting gig:', error);
+      console.error('Error in handlePostGig:', error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       if (isMountedRef.current) {
         showMessage('Error', error instanceof Error ? error.message : 'Failed to post gig. Please try again.', true);
       }
@@ -393,10 +413,21 @@ export default function HomeScreen() {
                 mode="date"
                 display="default"
                 onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate && isMountedRef.current) {
+                  console.log('DatePicker onChange event:', event.type, selectedDate);
+                  // On Android, always close the picker
+                  if (Platform.OS === 'android') {
+                    setShowDatePicker(false);
+                  }
+                  // Only update date if user didn't cancel
+                  if (event.type === 'set' && selectedDate && isMountedRef.current) {
                     setServiceDate(selectedDate);
                     console.log('Service date selected:', selectedDate);
+                    // On iOS, close picker after selection
+                    if (Platform.OS === 'ios') {
+                      setShowDatePicker(false);
+                    }
+                  } else if (event.type === 'dismissed') {
+                    console.log('Date picker dismissed');
                   }
                 }}
                 minimumDate={new Date()}
@@ -426,10 +457,21 @@ export default function HomeScreen() {
                 mode="time"
                 display="default"
                 onChange={(event, selectedTime) => {
-                  setShowTimePicker(false);
-                  if (selectedTime && isMountedRef.current) {
+                  console.log('TimePicker onChange event:', event.type, selectedTime);
+                  // On Android, always close the picker
+                  if (Platform.OS === 'android') {
+                    setShowTimePicker(false);
+                  }
+                  // Only update time if user didn't cancel
+                  if (event.type === 'set' && selectedTime && isMountedRef.current) {
                     setServiceTime(selectedTime);
                     console.log('Service time selected:', selectedTime);
+                    // On iOS, close picker after selection
+                    if (Platform.OS === 'ios') {
+                      setShowTimePicker(false);
+                    }
+                  } else if (event.type === 'dismissed') {
+                    console.log('Time picker dismissed');
                   }
                 }}
               />
