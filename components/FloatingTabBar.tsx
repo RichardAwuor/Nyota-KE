@@ -27,9 +27,10 @@ const { width: screenWidth } = Dimensions.get('window');
 
 export interface TabBarItem {
   name: string;
-  route: Href;
+  route?: Href;
   icon: keyof typeof MaterialIcons.glyphMap;
-  label: string;
+  label?: string;
+  title?: string;
 }
 
 interface FloatingTabBarProps {
@@ -64,7 +65,7 @@ export default function FloatingTabBar({
         score = 100;
       }
       // Check if pathname starts with tab route (for nested routes)
-      else if (pathname.startsWith(tab.route as string)) {
+      else if (pathname.startsWith(resolvedRoute)) {
         score = 80;
       }
       // Check if pathname contains the tab name
@@ -72,7 +73,7 @@ export default function FloatingTabBar({
         score = 60;
       }
       // Check for partial matches in the route
-      else if (tab.route.includes('/(tabs)/') && pathname.includes(tab.route.split('/(tabs)/')[1])) {
+      else if (resolvedRoute.includes('/(tabs)/') && pathname.includes(resolvedRoute.split('/(tabs)/')[1])) {
         score = 40;
       }
 
@@ -96,8 +97,10 @@ export default function FloatingTabBar({
     }
   }, [activeTabIndex, animatedValue]);
 
-  const handleTabPress = (route: Href) => {
-    router.push(route);
+  const handleTabPress = (tab: TabBarItem) => {
+    const resolvedRoute = (tab.route || `/(tabs)/${tab.name}`) as Href;
+    console.log('Tab pressed:', tab.name, 'navigating to', resolvedRoute);
+    router.navigate(resolvedRoute);
   };
 
   const tabWidthPercent = ((100 / tabs.length) - 1).toFixed(2);
@@ -178,7 +181,7 @@ export default function FloatingTabBar({
                 <TouchableOpacity
                   key={index} // Use index as key
                   style={styles.tab}
-                  onPress={() => handleTabPress(tab.route)}
+                  onPress={() => handleTabPress(tab)}
                   activeOpacity={0.7}
                 >
                   <View key={index} style={styles.tabContent}>
@@ -195,7 +198,7 @@ export default function FloatingTabBar({
                         isActive && { color: colors.primary, fontWeight: '600' },
                       ]}
                     >
-                      {tab.label}
+                      {tab.label || tab.title || tab.name}
                     </Text>
                   </View>
                 </TouchableOpacity>

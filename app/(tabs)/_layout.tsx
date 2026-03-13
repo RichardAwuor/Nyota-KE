@@ -12,13 +12,13 @@ export default function TabLayout() {
   const isProvider = user?.userType === 'provider';
 
   const clientTabs = [
-    { name: 'index', title: 'Home', icon: 'home' },
-    { name: 'profile', title: 'Profile', icon: 'person' },
+    { name: 'index', title: 'Home', icon: 'home', label: 'Home', route: '/(tabs)/' },
+    { name: 'profile', title: 'Profile', icon: 'person', label: 'Profile', route: '/(tabs)/profile' },
   ];
 
   const providerTabs = [
-    { name: 'index', title: 'Gigs', icon: 'work' },
-    { name: 'profile', title: 'Profile', icon: 'person' },
+    { name: 'index', title: 'Gigs', icon: 'work', label: 'Gigs', route: '/(tabs)/' },
+    { name: 'profile', title: 'Profile', icon: 'person', label: 'Profile', route: '/(tabs)/profile' },
   ];
 
   const tabs = isClient ? clientTabs : providerTabs;

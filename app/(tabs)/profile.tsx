@@ -54,7 +54,6 @@ export default function ProfileScreen() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
-  console.log('Profile screen loaded');
 
   const isProvider = user?.userType === 'provider';
   const isClient = user?.userType === 'client';
@@ -296,7 +295,7 @@ export default function ProfileScreen() {
   const topMatchedTitle = 'Top Matched Service Providers';
   const noMatchesText = 'No matched providers available';
   const waitingText = 'Waiting for provider response...';
-  const waitingSubtext = 'If they decline or don&apos;t respond in 3 minutes, the gig will be broadcast to all matched providers.';
+  const waitingSubtext = "If they decline or don't respond in 3 minutes, the gig will be broadcast to all matched providers.";
   const subscriptionStatusTitle = 'Subscription Status';
   const activeText = 'Active';
   const inactiveText = 'Inactive';
@@ -311,7 +310,7 @@ export default function ProfileScreen() {
   const confirmSelectionTitle = 'Confirm Selection';
   const confirmMessagePrefix = 'Send direct gig offer to ';
   const confirmMessageSuffix = '?';
-  const confirmSubtext = 'They will have 3 minutes to accept. If they decline or don&apos;t respond, the gig will be broadcast to all matched providers.';
+  const confirmSubtext = "They will have 3 minutes to accept. If they decline or don't respond, the gig will be broadcast to all matched providers.";
   const cancelText = 'Cancel';
   const confirmText = 'Confirm';
   const selectText = 'Select';
