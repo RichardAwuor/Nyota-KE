@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '@/styles/commonStyles';
 import { useUser } from '@/contexts/UserContext';
 import { SERVICE_CATEGORIES } from '@/constants/data';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { apiCall } from '@/utils/api';
 import { IconSymbol } from '@/components/IconSymbol';
 
@@ -59,11 +59,42 @@ function ErrorModal({ visible, title, message, onClose }: { visible: boolean; ti
   );
 }
 
+// Success Modal with navigation callback
+function SuccessModal({ visible, title, message, onClose }: { visible: boolean; title: string; message: string; onClose: () => void }) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const bgColor = isDark ? colors.cardDark : colors.card;
+  const textColor = isDark ? colors.textDark : colors.text;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.errorModalOverlay}>
+        <View style={[styles.errorModalContent, { backgroundColor: bgColor }]}>
+          <Text style={[styles.errorModalTitle, { color: colors.success }]}>{title}</Text>
+          <Text style={[styles.errorModalMessage, { color: textColor }]}>{message}</Text>
+          <TouchableOpacity
+            style={[styles.errorModalButton, { backgroundColor: colors.primary }]}
+            onPress={onClose}
+          >
+            <Text style={styles.errorModalButtonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function PostGigScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { user } = useUser();
+  const mountedRef = useRef(true);
 
   const [category, setCategory] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -79,8 +110,16 @@ export default function PostGigScreen() {
   const [preferredGender, setPreferredGender] = useState<'any' | 'male' | 'female'>('any');
   const [loading, setLoading] = useState(false);
   const [errorModal, setErrorModal] = useState({ visible: false, title: '', message: '' });
+  const [successModal, setSuccessModal] = useState({ visible: false, title: '', message: '' });
 
   console.log('Post gig screen loaded');
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const bgColor = isDark ? colors.backgroundDark : colors.background;
   const textColor = isDark ? colors.textDark : colors.text;
@@ -105,7 +144,29 @@ export default function PostGigScreen() {
   const timeDisplay = formatTime(serviceTime);
 
   const showError = (title: string, message: string) => {
-    setErrorModal({ visible: true, title, message });
+    if (mountedRef.current) {
+      setErrorModal({ visible: true, title, message });
+    }
+  };
+
+  const showSuccess = (title: string, message: string) => {
+    if (mountedRef.current) {
+      setSuccessModal({ visible: true, title, message });
+    }
+  };
+
+  const handleSuccessClose = () => {
+    console.log('Success modal closed, navigating to profile');
+    setSuccessModal({ visible: false, title: '', message: '' });
+    
+    // Navigate immediately when user closes the success modal
+    try {
+      if (mountedRef.current) {
+        router.replace('/(tabs)/profile');
+      }
+    } catch (navError) {
+      console.error('Navigation error after gig post:', navError);
+    }
   };
 
   const handlePostGig = async () => {
@@ -187,29 +248,70 @@ export default function PostGigScreen() {
 
       console.log('Gig posted successfully:', data);
       
-      // Update loading state before navigation
-      setLoading(false);
-      
-      // Show success message
-      showError('Success', 'Gig posted successfully! View it in your profile.');
-      
-      // Navigate to profile after a short delay to allow user to see success message
-      setTimeout(() => {
-        console.log('Navigating to profile after gig post');
-        try {
-          router.replace('/(tabs)/profile');
-        } catch (navError) {
-          console.error('Navigation error:', navError);
-        }
-      }, 1500);
+      // Update loading state before showing success
+      if (mountedRef.current) {
+        setLoading(false);
+        
+        // Show success message - navigation will happen when user closes the modal
+        showSuccess('Success', 'Gig posted successfully! View it in your profile.');
+      }
     } catch (error) {
       console.error('Error in handlePostGig:', error);
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-      setLoading(false);
-      showError(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to post gig. Please try again.'
-      );
+      
+      if (mountedRef.current) {
+        setLoading(false);
+        showError(
+          'Error',
+          error instanceof Error ? error.message : 'Failed to post gig. Please try again.'
+        );
+      }
+    }
+  };
+
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const { type } = event;
+    console.log(`DatePicker onChange event: type=${type}, date=${selectedDate}`);
+    
+    // Always close picker on Android after any interaction
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    // Only update date if user confirmed selection
+    if (type === 'set' && selectedDate && mountedRef.current) {
+      setServiceDate(selectedDate);
+      console.log('Service date selected:', selectedDate);
+      
+      // On iOS, close picker after selection
+      if (Platform.OS === 'ios') {
+        setShowDatePicker(false);
+      }
+    } else if (type === 'dismissed') {
+      console.log('Date picker dismissed without selection');
+    }
+  };
+
+  const onTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    const { type } = event;
+    console.log(`TimePicker onChange event: type=${type}, time=${selectedTime}`);
+    
+    // Always close picker on Android after any interaction
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    
+    // Only update time if user confirmed selection
+    if (type === 'set' && selectedTime && mountedRef.current) {
+      setServiceTime(selectedTime);
+      console.log('Service time selected:', selectedTime);
+      
+      // On iOS, close picker after selection
+      if (Platform.OS === 'ios') {
+        setShowTimePicker(false);
+      }
+    } else if (type === 'dismissed') {
+      console.log('Time picker dismissed without selection');
     }
   };
 
@@ -330,24 +432,7 @@ export default function PostGigScreen() {
               value={serviceDate}
               mode="date"
               display="default"
-              onChange={(event, selectedDate) => {
-                console.log('DatePicker onChange event:', event.type, selectedDate);
-                // On Android, always close the picker
-                if (Platform.OS === 'android') {
-                  setShowDatePicker(false);
-                }
-                // Only update date if user didn't cancel
-                if (event.type === 'set' && selectedDate) {
-                  setServiceDate(selectedDate);
-                  console.log('Service date selected:', selectedDate);
-                  // On iOS, close picker after selection
-                  if (Platform.OS === 'ios') {
-                    setShowDatePicker(false);
-                  }
-                } else if (event.type === 'dismissed') {
-                  console.log('Date picker dismissed');
-                }
-              }}
+              onChange={onDateChange}
               minimumDate={new Date()}
             />
           )}
@@ -374,24 +459,7 @@ export default function PostGigScreen() {
               value={serviceTime}
               mode="time"
               display="default"
-              onChange={(event, selectedTime) => {
-                console.log('TimePicker onChange event:', event.type, selectedTime);
-                // On Android, always close the picker
-                if (Platform.OS === 'android') {
-                  setShowTimePicker(false);
-                }
-                // Only update time if user didn't cancel
-                if (event.type === 'set' && selectedTime) {
-                  setServiceTime(selectedTime);
-                  console.log('Service time selected:', selectedTime);
-                  // On iOS, close picker after selection
-                  if (Platform.OS === 'ios') {
-                    setShowTimePicker(false);
-                  }
-                } else if (event.type === 'dismissed') {
-                  console.log('Time picker dismissed');
-                }
-              }}
+              onChange={onTimeChange}
             />
           )}
 
@@ -537,6 +605,14 @@ export default function PostGigScreen() {
         title={errorModal.title}
         message={errorModal.message}
         onClose={() => setErrorModal({ visible: false, title: '', message: '' })}
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={successModal.visible}
+        title={successModal.title}
+        message={successModal.message}
+        onClose={handleSuccessClose}
       />
     </>
   );
