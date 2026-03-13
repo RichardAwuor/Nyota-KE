@@ -4,11 +4,7 @@ import axios from 'axios';
 import * as schema from '../db/schema.js';
 import type { App } from '../index.js';
 
-// M-Pesa credentials (Production Go-Live)
-const CONSUMER_KEY = 'bZHFT3P37yZRT6W06xI6hbaqiR3n2A887tmi9T01ZwbjX2Ab';
-const CONSUMER_SECRET = '5bBgJVgT6EO5pGuAHBG9FZxbaau7ky5LCkcYQFx8DxuFvmbOVOMAgynkZAsg6xhz';
-const SHORTCODE = '4523859';
-const PASSKEY = '2a7d86a26de9020e3001c3c94a0a1f90e8165efb009b9dbc8e560b9bfa0c9af3';
+// M-Pesa configuration constants
 const SUBSCRIPTION_AMOUNT = 130;
 
 // M-Pesa API URLs (Production Go-Live)
@@ -18,9 +14,9 @@ const STK_PUSH_URL = 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processreques
 const TRANSACTION_STATUS_URL = 'https://api.safaricom.co.ke/mpesa/transactionstatus/v1/query';
 
 // Get M-Pesa access token
-async function getMpesaAccessToken(): Promise<string> {
+async function getMpesaAccessToken(consumerKey: string, consumerSecret: string): Promise<string> {
   try {
-    const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
     const response = await axios.get(AUTH_URL, {
       headers: {
         Authorization: `Basic ${auth}`,
@@ -29,8 +25,7 @@ async function getMpesaAccessToken(): Promise<string> {
 
     return response.data.access_token;
   } catch (error: any) {
-    const errorMsg = error.response?.data || error.message;
-    throw new Error(`Failed to get M-Pesa access token: ${JSON.stringify(errorMsg)}`);
+    throw error;
   }
 }
 
@@ -79,8 +74,19 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         400: {
           type: 'object',
           properties: {
-            success: { type: 'boolean' },
-            message: { type: 'string' }
+            error: { type: 'string' },
+          },
+        },
+        502: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+          },
+        },
+        503: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
           },
         },
       },
@@ -91,8 +97,33 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
     }>,
     reply: FastifyReply
   ) => {
+    // Validate required env vars
+    const requiredEnvVars = [
+      'MPESA_CONSUMER_KEY',
+      'MPESA_CONSUMER_SECRET',
+      'MPESA_SHORTCODE',
+      'MPESA_PASSKEY',
+      'MPESA_CALLBACK_URL',
+    ];
+
+    const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+    if (missingEnvVars.length > 0) {
+      app.logger.warn({ missingEnvVars }, 'M-Pesa configuration incomplete');
+      return reply.status(503).send({
+        error: 'M-Pesa payment service is not configured. Please contact support.',
+      });
+    }
+
+    const consumerKey = process.env.MPESA_CONSUMER_KEY!;
+    const consumerSecret = process.env.MPESA_CONSUMER_SECRET!;
+    const shortCode = process.env.MPESA_SHORTCODE!;
+    const passKey = process.env.MPESA_PASSKEY!;
+    const callbackUrlFromEnv = process.env.MPESA_CALLBACK_URL!;
+
     const { providerId, amount = SUBSCRIPTION_AMOUNT } = request.body;
-    app.logger.info({ providerId, amount }, 'Initiating M-Pesa subscription payment');
+
+    // Request logging
+    app.logger.info({ providerId }, 'M-Pesa initiate request received');
 
     try {
       // Verify provider exists and get phone number
@@ -104,8 +135,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       if (provider.length === 0) {
         app.logger.warn({ providerId }, 'Provider not found');
         return reply.status(400).send({
-          success: false,
-          message: 'Provider not found'
+          error: 'Provider not found',
         });
       }
 
@@ -113,8 +143,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       if (!phoneNumber) {
         app.logger.warn({ providerId }, 'Provider has no phone number');
         return reply.status(400).send({
-          success: false,
-          message: 'Provider phone number not found'
+          error: 'Provider phone number not found',
         });
       }
 
@@ -132,49 +161,49 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       if (!/^254\d{9}$/.test(formattedPhone)) {
         app.logger.warn({ phoneNumber, formattedPhone }, 'Invalid phone number format');
         return reply.status(400).send({
-          success: false,
-          message: 'Invalid phone number format'
+          error: 'Invalid phone number. Must be in format 254XXXXXXXXX',
         });
       }
 
       // Get M-Pesa access token
       let accessToken: string;
       try {
-        accessToken = await getMpesaAccessToken();
+        accessToken = await getMpesaAccessToken(consumerKey, consumerSecret);
       } catch (tokenError: any) {
-        app.logger.error({ err: tokenError, providerId }, 'Failed to get M-Pesa access token');
-        return reply.status(500).send({
-          success: false,
-          message: 'Failed to authenticate with M-Pesa'
+        app.logger.error(
+          { err: tokenError, providerId },
+          'Failed to get M-Pesa access token'
+        );
+        return reply.status(502).send({
+          error: 'Failed to connect to M-Pesa. Please try again later.',
         });
       }
 
       const timestamp = getTimestamp();
-      const password = generatePassword(SHORTCODE, PASSKEY, timestamp);
-      const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.BACKEND_URL || 'http://localhost:3000'}/api/mpesa/callback`;
+      const password = generatePassword(shortCode, passKey, timestamp);
       const merchantRequestId = `MR-${Date.now()}-${providerId}`;
 
       // Build STK Push request
       const stkPayload = {
-        BusinessShortCode: SHORTCODE,
+        BusinessShortCode: shortCode,
         Password: password,
         Timestamp: timestamp,
         TransactionType: 'CustomerPayBillOnline',
         Amount: amount.toString(),
         PartyA: formattedPhone,
-        PartyB: SHORTCODE,
+        PartyB: shortCode,
         PhoneNumber: formattedPhone,
-        CallBackURL: callbackUrl,
+        CallBackURL: callbackUrlFromEnv,
         AccountReference: `Collarless-${providerId}`,
         TransactionDesc: 'Subscription payment',
       };
 
       app.logger.info(
         {
-          shortCode: SHORTCODE,
+          shortCode,
           amount,
           msisdn: formattedPhone,
-          callbackUrl,
+          callbackUrl: callbackUrlFromEnv,
           accountRef: `Collarless-${providerId}`,
         },
         'M-Pesa STK Push request prepared'
@@ -199,6 +228,11 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
           },
         });
 
+        const responseCode = stkResponse.data?.ResponseCode;
+        if (responseCode !== '0') {
+          throw new Error(`M-Pesa returned non-zero response code: ${responseCode}`);
+        }
+
         app.logger.info(
           {
             status: stkResponse.status,
@@ -210,27 +244,19 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
           'M-Pesa STK Push response received'
         );
       } catch (stkError: any) {
-        const errorStatus = stkError.response?.status;
-        const errorData = stkError.response?.data;
-        const errorMessage = errorData?.errorMessage || errorData?.message || errorData?.ResponseDescription || stkError.message;
-
         app.logger.error(
           {
             err: stkError,
             providerId,
             phoneNumber: formattedPhone,
-            httpStatus: errorStatus,
-            mpesaErrorCode: errorData?.requestId,
-            mpesaErrorMessage: errorMessage,
-            mpesaFullError: errorData,
+            httpStatus: stkError.response?.status,
+            mpesaError: stkError.response?.data,
           },
           'M-Pesa STK Push API request failed'
         );
 
-        const errorDetail = errorMessage || JSON.stringify(errorData) || 'Unknown error';
-        return reply.status(errorStatus || 400).send({
-          success: false,
-          message: `M-Pesa API Error: ${errorDetail}`,
+        return reply.status(502).send({
+          error: 'M-Pesa STK push failed. Please check your phone number and try again.',
         });
       }
 
@@ -241,9 +267,8 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
           { responseData: stkResponse.data },
           'M-Pesa response missing CheckoutRequestID'
         );
-        return reply.status(500).send({
-          success: false,
-          message: 'Invalid response from M-Pesa'
+        return reply.status(502).send({
+          error: 'M-Pesa STK push failed. Please check your phone number and try again.',
         });
       }
 
@@ -272,10 +297,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         { err: error, providerId, errorMessage: error.message },
         'Unexpected error during M-Pesa payment initiation'
       );
-      return reply.status(500).send({
-        success: false,
-        message: 'Failed to initiate payment. Please try again.'
-      });
+      throw error;
     }
   });
 
@@ -410,7 +432,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         ResultCode: 0,
         ResultDesc: 'Callback processed successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       app.logger.error({ err: error }, 'Error processing M-Pesa STK Push callback');
       return reply.status(200).send({
         ResultCode: 1,
@@ -480,5 +502,16 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       app.logger.error({ err: error, checkoutRequestId }, 'Failed to fetch transaction status');
       throw error;
     }
+  });
+
+  // Error handler for M-Pesa routes
+  fastify.setErrorHandler(async (error: any, request, reply) => {
+    if (request.url.startsWith('/api/mpesa')) {
+      app.logger.error({ err: error, path: request.url }, 'Unhandled error in M-Pesa route');
+      return reply.status(500).send({
+        error: error?.message || 'Internal server error',
+      });
+    }
+    throw error;
   });
 }
