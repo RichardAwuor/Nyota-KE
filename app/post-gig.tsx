@@ -95,7 +95,6 @@ export default function PostGigScreen() {
   const isDark = colorScheme === 'dark';
   const { user } = useUser();
   const mountedRef = useRef(true);
-  const navigationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [category, setCategory] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -119,11 +118,6 @@ export default function PostGigScreen() {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      // Clear any pending navigation timeouts
-      if (navigationTimeoutRef.current) {
-        clearTimeout(navigationTimeoutRef.current);
-        navigationTimeoutRef.current = null;
-      }
     };
   }, []);
 
@@ -162,33 +156,26 @@ export default function PostGigScreen() {
   };
 
   const handleSuccessClose = () => {
-    console.log('Success modal closing, preparing to navigate to profile');
+    console.log('Success modal closing, navigating to profile');
     
-    // First, close the modal
-    if (mountedRef.current) {
-      setSuccessModal({ visible: false, title: '', message: '' });
+    if (!mountedRef.current) {
+      console.log('Component unmounted, skipping navigation');
+      return;
     }
-    
-    // Wait for modal animation to complete before navigating (Android fix)
-    navigationTimeoutRef.current = setTimeout(() => {
-      if (!mountedRef.current) {
-        console.log('Component unmounted, skipping navigation');
-        return;
-      }
-      
+
+    setSuccessModal({ visible: false, title: '', message: '' });
+
+    try {
+      console.log('Navigating to profile screen');
+      router.replace('/(tabs)/profile');
+    } catch (navError) {
+      console.error('Navigation error after gig post:', navError);
       try {
-        console.log('Navigating to profile screen');
-        router.replace('/(tabs)/profile');
-      } catch (navError) {
-        console.error('Navigation error after gig post:', navError);
-        // If navigation fails, try going back as fallback
-        try {
-          router.back();
-        } catch (backError) {
-          console.error('Fallback navigation also failed:', backError);
-        }
+        router.back();
+      } catch (backError) {
+        console.error('Fallback navigation also failed:', backError);
       }
-    }, 300); // 300ms delay to ensure modal is fully closed
+    }
   };
 
   const handlePostGig = async () => {
