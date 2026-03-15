@@ -156,26 +156,11 @@ export default function PostGigScreen() {
   };
 
   const handleSuccessClose = () => {
-    console.log('Success modal closing, navigating to profile');
-
-    if (!mountedRef.current) {
-      console.log('Component unmounted, skipping navigation');
-      return;
-    }
-
+    if (!mountedRef.current) return;
     setSuccessModal({ visible: false, title: '', message: '' });
-
-    try {
-      console.log('Navigating to profile screen via replace');
-      router.replace('/(tabs)/profile');
-    } catch (navError) {
-      console.error('Navigation error after gig post:', navError);
-      try {
-        router.back();
-      } catch (backError) {
-        console.error('Fallback navigation also failed:', backError);
-      }
-    }
+    // On Android, replacing directly to a tab route from a stack screen crashes.
+    // Navigate to the tabs root — the user can then tap Profile tab.
+    router.replace('/(tabs)');
   };
 
   const handlePostGig = async () => {

@@ -29,7 +29,6 @@ export default function TabLayout() {
       >
         <Tabs.Screen name="index" options={{ headerShown: false }} />
         <Tabs.Screen name="profile" options={{ headerShown: false }} />
-        <Tabs.Screen name="(home)" options={{ href: null }} />
       </Tabs>
     </React.Fragment>
   );
