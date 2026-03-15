@@ -5,10 +5,31 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useUser } from '@/contexts/UserContext';
-import { apiCall } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 import { COUNTIES } from '@/constants/counties';
 import { Picker } from '@react-native-picker/picker';
+
+function parseRegistrationError(error: unknown): string {
+  if (error instanceof TypeError) {
+    // Network-level failure (no response at all)
+    return 'Connection failed. Please check your internet and try again.';
+  }
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('email already') || msg.includes('duplicate') || msg.includes('already in use') || msg.includes('already exists')) {
+      return 'An account with this email already exists. Please use a different email or log in.';
+    }
+    if (msg === 'bad request' || msg.includes('api request failed with status 400')) {
+      return 'Please check your details and try again.';
+    }
+    if (error.message && error.message !== 'Bad Request') {
+      return error.message;
+    }
+  }
+  return 'Something went wrong. Please try again.';
+}
 
 export default function RegisterClientScreen() {
   const router = useRouter();
@@ -16,13 +37,25 @@ export default function RegisterClientScreen() {
 
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
+  const [emailMismatch, setEmailMismatch] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [selectedCounty, setSelectedCounty] = useState(COUNTIES[46].countyCode);
   const [loading, setLoading] = useState(false);
 
+  const emailsMatch = email.length > 0 && confirmEmail.length > 0 && email === confirmEmail;
+  const emailsMismatch = confirmEmail.length > 0 && email !== confirmEmail;
+
+  const handleConfirmEmailChange = (val: string) => {
+    setConfirmEmail(val);
+    if (emailMismatch && val === email) {
+      setEmailMismatch(false);
+    }
+  };
+
   const handleRegister = async () => {
     console.log('[RegisterClient] Register button pressed', { email, firstName, lastName, county: selectedCounty });
+
     if (!email || !confirmEmail || !firstName || !lastName) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -32,35 +65,62 @@ export default function RegisterClientScreen() {
       return;
     }
     if (email !== confirmEmail) {
-      Alert.alert('Error', 'Email addresses do not match');
+      setEmailMismatch(true);
       return;
     }
 
+    setEmailMismatch(false);
     setLoading(true);
+
     try {
-      console.log('[RegisterClient] POST /api/users/register-client');
-      const response = await apiCall('/api/users/register-client', {
+      console.log('[RegisterClient] POST /api/users/register-client', { email, firstName, lastName, county: selectedCounty });
+
+      const url = `${BACKEND_URL}/api/users/register-client`;
+      const response = await fetch(url, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, firstName, lastName, county: selectedCounty }),
       });
 
+      const responseText = await response.text();
+      console.log(`[RegisterClient] Raw response (${response.status}):`, responseText.substring(0, 300));
+
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(response.ok ? 'Invalid server response.' : `Server error (${response.status})`);
+      }
+
+      if (!response.ok) {
+        // Prefer message > error > statusText
+        const serverMsg: string = data?.message || data?.error || response.statusText || '';
+        console.log('[RegisterClient] Registration failed:', response.status, serverMsg);
+        throw new Error(serverMsg || `API request failed with status ${response.status}`);
+      }
+
+      console.log('[RegisterClient] Registration successful', data);
+
       setUser({
-        id: response.user.id,
-        email: response.user.email,
+        id: data.user.id,
+        email: data.user.email,
         userType: 'client',
-        firstName: response.user.firstName,
-        lastName: response.user.lastName,
-        county: response.user.county,
+        firstName: data.user.firstName,
+        lastName: data.user.lastName,
+        county: data.user.county,
       });
 
-      router.replace('/(tabs)');
+      router.replace('/post-gig');
     } catch (error) {
       console.log('[RegisterClient] Registration error:', error);
-      Alert.alert('Registration Failed', error instanceof Error ? error.message : 'Please try again');
+      const friendlyMessage = parseRegistrationError(error);
+      Alert.alert('Registration Failed', friendlyMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const confirmBorderColor = emailsMismatch ? '#FF3B30' : emailsMatch ? '#22c55e' : '#ddd';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,16 +158,24 @@ export default function RegisterClientScreen() {
         />
 
         <Text style={styles.label}>Confirm Email *</Text>
-        <TextInput
-          style={[styles.input, confirmEmail.length > 0 && email !== confirmEmail && styles.inputError]}
-          placeholder="Re-enter your email"
-          value={confirmEmail}
-          onChangeText={setConfirmEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {confirmEmail.length > 0 && email !== confirmEmail && (
+        <View style={[styles.inputWrapper, { borderColor: confirmBorderColor }]}>
+          <TextInput
+            style={styles.inputInner}
+            placeholder="Re-enter your email"
+            value={confirmEmail}
+            onChangeText={handleConfirmEmailChange}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {emailsMatch && (
+            <Ionicons name="checkmark-circle" size={22} color="#22c55e" style={styles.inputIcon} />
+          )}
+          {emailsMismatch && (
+            <Ionicons name="close-circle" size={22} color="#FF3B30" style={styles.inputIcon} />
+          )}
+        </View>
+        {(emailsMismatch || emailMismatch) && (
           <Text style={styles.errorText}>Emails do not match</Text>
         )}
 
@@ -150,7 +218,16 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     padding: 14, fontSize: 16, backgroundColor: '#fafafa', color: '#111',
   },
-  inputError: { borderColor: '#FF3B30' },
+  inputWrapper: {
+    flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderRadius: 10,
+    backgroundColor: '#fafafa',
+    paddingHorizontal: 14,
+  },
+  inputInner: {
+    flex: 1, paddingVertical: 14, fontSize: 16, color: '#111',
+  },
+  inputIcon: { marginLeft: 8 },
   errorText: { color: '#FF3B30', fontSize: 13, marginTop: 4 },
   pickerContainer: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
