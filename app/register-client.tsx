@@ -43,8 +43,10 @@ export default function RegisterClientScreen() {
   const [selectedCounty, setSelectedCounty] = useState(COUNTIES[46].countyCode);
   const [loading, setLoading] = useState(false);
 
-  const emailsMatch = email.length > 0 && confirmEmail.length > 0 && email === confirmEmail;
-  const emailsMismatch = confirmEmail.length > 0 && email !== confirmEmail;
+  const emailTrimmed = email.trim().toLowerCase();
+  const confirmEmailTrimmed = confirmEmail.trim().toLowerCase();
+  const emailsMatch = emailTrimmed.length > 0 && confirmEmailTrimmed.length > 0 && emailTrimmed === confirmEmailTrimmed;
+  const emailsMismatch = confirmEmailTrimmed.length > 0 && emailTrimmed !== confirmEmailTrimmed;
 
   const handleConfirmEmailChange = (val: string) => {
     setConfirmEmail(val);
@@ -64,7 +66,7 @@ export default function RegisterClientScreen() {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-    if (email !== confirmEmail) {
+    if (emailTrimmed !== confirmEmailTrimmed) {
       setEmailMismatch(true);
       return;
     }
@@ -73,41 +75,50 @@ export default function RegisterClientScreen() {
     setLoading(true);
 
     try {
-      console.log('[RegisterClient] POST /api/users/register-client', { email, firstName, lastName, county: selectedCounty });
+      console.log('[RegisterClient] POST /api/users/register-client', { email: emailTrimmed, firstName, lastName, county: selectedCounty });
 
       const url = `${BACKEND_URL}/api/users/register-client`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, firstName, lastName, county: selectedCounty }),
+        body: JSON.stringify({ email: emailTrimmed, firstName: firstName.trim(), lastName: lastName.trim(), county: selectedCounty }),
       });
 
       const responseText = await response.text();
-      console.log(`[RegisterClient] Raw response (${response.status}):`, responseText.substring(0, 300));
+      console.log(`[RegisterClient] Raw response (${response.status}):`, responseText.substring(0, 500));
 
-      let data: any;
+      let data: any = {};
       try {
         data = JSON.parse(responseText);
       } catch {
-        throw new Error(response.ok ? 'Invalid server response.' : `Server error (${response.status})`);
+        // Non-JSON response
+        if (response.ok) {
+          // Treat as success even if body isn't JSON
+          data = {};
+        } else {
+          throw new Error(`Server error (${response.status}): ${responseText.substring(0, 100)}`);
+        }
       }
 
+      console.log('[RegisterClient] Registration response:', response.status, data);
+
       if (!response.ok) {
-        // Prefer message > error > statusText
         const serverMsg: string = data?.message || data?.error || response.statusText || '';
         console.log('[RegisterClient] Registration failed:', response.status, serverMsg);
-        throw new Error(serverMsg || `API request failed with status ${response.status}`);
+        throw new Error(serverMsg || `Registration failed with status ${response.status}`);
       }
 
       console.log('[RegisterClient] Registration successful', data);
 
+      // Support both { user: { ... } } and flat { id, email, ... } response shapes
+      const userPayload = data.user ?? data;
       setUser({
-        id: data.user.id,
-        email: data.user.email,
+        id: userPayload.id ?? '',
+        email: userPayload.email ?? emailTrimmed,
         userType: 'client',
-        firstName: data.user.firstName,
-        lastName: data.user.lastName,
-        county: data.user.county,
+        firstName: userPayload.firstName ?? firstName.trim(),
+        lastName: userPayload.lastName ?? lastName.trim(),
+        county: userPayload.county ?? selectedCounty,
       });
 
       router.replace('/post-gig');
