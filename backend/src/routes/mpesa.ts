@@ -21,20 +21,20 @@ function getNairobiTimestamp(): string {
 
 // Normalize phone number to 254XXXXXXXXX format
 function normalizePhoneNumber(phoneNumber: string): string {
-  // Remove all non-digits
-  let normalized = phoneNumber.replace(/\D/g, '');
+  // 1. Strip all spaces, dashes, and + characters
+  let normalized = phoneNumber.replace(/[\s\-+]/g, '');
 
-  // If starts with 254, return as-is
-  if (normalized.startsWith('254')) {
-    return normalized;
-  }
-
-  // If starts with 0, replace with 254
+  // 2. If it starts with "0", replace the leading "0" with "254"
   if (normalized.startsWith('0')) {
     return '254' + normalized.substring(1);
   }
 
-  // Otherwise, prepend 254
+  // 3. If it already starts with "254", leave as-is
+  if (normalized.startsWith('254')) {
+    return normalized;
+  }
+
+  // 4. Otherwise, prepend "254"
   return '254' + normalized;
 }
 
@@ -150,52 +150,36 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
         'OAuth token received'
       );
 
-      // Build timestamp
-      const timestamp = getNairobiTimestamp();
-      app.logger.info({ timestamp }, 'Nairobi timestamp built');
-
-      // Build password
-      const passwordString = `${shortCode}${passKey}${timestamp}`;
-      const password = Buffer.from(passwordString).toString('base64');
-      app.logger.debug({ passwordString, password }, 'Password generated');
-
-      // Build STK Push payload
-      const stkPayload = {
-        BusinessShortCode: shortCode,
-        Password: password,
-        Timestamp: timestamp,
-        TransactionType: 'CustomerPayBillOnline',
-        Amount: '130',
-        PartyA: normalizedPhone,
-        PartyB: shortCode,
-        PhoneNumber: normalizedPhone,
-        CallBackURL: callbackUrl,
-        AccountReference: 'NYOTA-KE',
-        TransactionDesc: 'Monthly Subscription',
+      // Build C2B Simulate payload
+      const c2bPayload = {
+        ShortCode: 8937121,
+        CommandID: 'CustomerPayBillOnline',
+        Amount: 130,
+        Msisdn: normalizedPhone,
+        BillRefNumber: 'null',
       };
 
       app.logger.info(
         {
-          shortCode,
+          shortCode: 8937121,
           amount: 130,
           phone: normalizedPhone,
-          callbackUrl,
         },
-        'STK Push payload prepared'
+        'C2B Simulate payload prepared'
       );
-      app.logger.debug({ payload: stkPayload }, 'Full STK Push payload');
+      app.logger.debug({ payload: c2bPayload }, 'Full C2B Simulate payload');
 
-      // Send STK Push request
+      // Send C2B Simulate request
       app.logger.info(
-        { url: 'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest' },
-        'Sending STK Push request'
+        { url: 'https://api.safaricom.co.ke/mpesa/c2b/v1/simulate' },
+        'Sending C2B Simulate request'
       );
 
-      let stkResponse;
+      let c2bResponse;
       try {
-        stkResponse = await axios.post(
-          'https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
-          stkPayload,
+        c2bResponse = await axios.post(
+          'https://api.safaricom.co.ke/mpesa/c2b/v1/simulate',
+          c2bPayload,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
@@ -214,7 +198,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
             response: error.response?.data,
             status: error.response?.status,
           },
-          'STK Push request failed'
+          'C2B Simulate request failed'
         );
         return reply.status(502).send({
           error: `M-Pesa error: ${errorMsg}`,
@@ -223,29 +207,29 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
 
       app.logger.info(
         {
-          status: stkResponse.status,
-          responseCode: stkResponse.data?.ResponseCode,
-          responseDesc: stkResponse.data?.ResponseDescription,
-          checkoutRequestId: stkResponse.data?.CheckoutRequestID,
-          merchantRequestId: stkResponse.data?.MerchantRequestID,
+          status: c2bResponse.status,
+          responseCode: c2bResponse.data?.ResponseCode,
+          responseDesc: c2bResponse.data?.ResponseDescription,
+          transactionId: c2bResponse.data?.TransactionID,
         },
-        'STK Push response received'
+        'C2B Simulate response received'
       );
 
       // Check response code
-      if (stkResponse.data?.ResponseCode !== '0') {
-        const errorMsg = stkResponse.data?.ResponseDescription || 'Unknown error';
+      if (c2bResponse.data?.ResponseCode !== '0') {
+        const errorMsg = c2bResponse.data?.ResponseDescription || 'Unknown error';
         app.logger.warn(
-          { responseCode: stkResponse.data?.ResponseCode },
-          'STK Push returned error code'
+          { responseCode: c2bResponse.data?.ResponseCode },
+          'C2B Simulate returned error code'
         );
         return reply.status(502).send({
           error: `M-Pesa error: ${errorMsg}`,
         });
       }
 
-      const checkoutRequestId = stkResponse.data.CheckoutRequestID;
-      const merchantRequestId = stkResponse.data.MerchantRequestID;
+      const transactionId = c2bResponse.data.TransactionID;
+      const checkoutRequestId = transactionId;
+      const merchantRequestId = `MR-${Date.now()}-${providerId}`;
 
       // Save transaction
       app.logger.info(
