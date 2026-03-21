@@ -2,7 +2,7 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  // NO-COLLAR brand colors - Red and Golden Yellow
+  // Nyota-KE brand colors - Red and Golden Yellow
   background: '#FFFFFF', // White background
   backgroundDark: '#1A1A1A', // Dark background
   
@@ -15,7 +15,7 @@ export const colors = {
   primary: '#FF0000', // Red for all task buttons
   primaryDark: '#FF3333', // Lighter red for dark mode
   
-  secondary: '#D4A843', // NO-COLLAR Golden Yellow
+  secondary: '#D4A843', // Nyota-KE Golden Yellow
   secondaryDark: '#E5B954',
   
   accent: '#D4A843', // Golden Yellow accent

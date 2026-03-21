@@ -20,7 +20,7 @@ import { useColorScheme, Modal, View, Text, TouchableOpacity, StyleSheet } from 
 import Constants from 'expo-constants';
 
 // Log backend URL on app startup
-console.log('=== NO-COLLAR App Starting ===');
+console.log('=== Nyota-KE App Starting ===');
 console.log('Backend URL:', Constants.expoConfig?.extra?.backendUrl);
 console.log('==============================');
 

@@ -233,7 +233,7 @@ export default function SubscriptionPaymentScreen() {
               
               showMessage(
                 'Payment Successful',
-                'Your subscription is now active. Welcome to NO-COLLAR!',
+                'Your subscription is now active. Welcome to Nyota-KE!',
                 false
               );
               
