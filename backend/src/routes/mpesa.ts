@@ -148,7 +148,7 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
       // Get OAuth token
       app.logger.info(
         { url: 'https://api.safaricom.co.ke/oauth/v1/generate' },
-        'Requesting M-Pesa OAuth token'
+        'Requesting M-Pesa OAuth token from production'
       );
 
       const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
@@ -162,17 +162,26 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
             },
           }
         );
+        console.log('Safaricom OAuth response status:', tokenResponse.status);
+        app.logger.info(
+          { status: tokenResponse.status },
+          'OAuth token received successfully'
+        );
       } catch (error: any) {
+        const errorMsg = error.response?.data?.error_description || error.response?.data?.error || error.message;
+        console.log('Safaricom OAuth error response:', JSON.stringify(error.response?.data));
         app.logger.error(
           {
             err: error,
             status: error.response?.status,
+            errorMessage: errorMsg,
             response: error.response?.data,
           },
           'Failed to get M-Pesa OAuth token'
         );
         return reply.status(502).send({
-          error: 'Failed to connect to M-Pesa',
+          error: `Failed to get M-Pesa access token: ${errorMsg}`,
+          safaricomResponse: error.response?.data,
         });
       }
 
@@ -235,44 +244,50 @@ export function registerMpesaRoutes(app: App, fastify: FastifyInstance) {
             },
           }
         );
+        console.log('Safaricom STK Push full response:', JSON.stringify(stkResponse.data));
+        app.logger.info(
+          {
+            status: stkResponse.status,
+            resultCode: stkResponse.data?.ResultCode,
+            resultDesc: stkResponse.data?.ResponseDescription,
+            checkoutRequestId: stkResponse.data?.CheckoutRequestID,
+            merchantRequestId: stkResponse.data?.MerchantRequestID,
+          },
+          'STK Push response received from Safaricom'
+        );
       } catch (error: any) {
         const errorMsg =
           error.response?.data?.errorMessage ||
           error.response?.data?.ResponseDescription ||
+          error.response?.data?.error ||
           error.message;
+        console.log('Safaricom STK Push error response:', JSON.stringify(error.response?.data));
         app.logger.error(
           {
             err: error,
             status: error.response?.status,
+            errorMessage: errorMsg,
             response: error.response?.data,
           },
           'STK Push request failed'
         );
         return reply.status(502).send({
-          error: errorMsg || 'M-Pesa STK Push failed',
+          error: `M-Pesa STK Push failed: ${errorMsg}`,
+          safaricomResponse: error.response?.data,
         });
       }
 
-      app.logger.info(
-        {
-          status: stkResponse.status,
-          resultCode: stkResponse.data?.ResultCode,
-          resultDesc: stkResponse.data?.ResultDescription,
-          checkoutRequestId: stkResponse.data?.CheckoutRequestID,
-          merchantRequestId: stkResponse.data?.MerchantRequestID,
-        },
-        'STK Push response received from Safaricom'
-      );
-
-      // Check result code
-      if (stkResponse.data?.ResultCode !== '0') {
-        const errorMsg = stkResponse.data?.ResultDescription || 'Unknown error';
+      // Check result code for non-zero responses
+      const responseCode = stkResponse.data?.ResultCode;
+      if (responseCode !== '0') {
+        const errorMsg = stkResponse.data?.ResponseDescription || `Safaricom error code: ${responseCode}`;
         app.logger.warn(
-          { resultCode: stkResponse.data?.ResultCode },
+          { resultCode: responseCode, description: stkResponse.data?.ResponseDescription },
           'STK Push returned non-zero result code'
         );
-        return reply.status(400).send({
-          error: errorMsg,
+        return reply.status(502).send({
+          error: `M-Pesa error: ${errorMsg}`,
+          safaricomResponse: stkResponse.data,
         });
       }
 
