@@ -51,19 +51,27 @@ export default function PostGigScreen() {
     setLoading(true);
     try {
       console.log('[PostGig] POST /api/gigs', { clientId: user.id, category });
+      const year = serviceDate.getFullYear();
+      const month = String(serviceDate.getMonth() + 1).padStart(2, '0');
+      const day = String(serviceDate.getDate()).padStart(2, '0');
+      const serviceDateISO = `${year}-${month}-${day}`;
+
+      const payload = {
+        clientId: user.id,
+        category,
+        serviceDate: serviceDateISO,
+        serviceTime: formatTime(serviceTime),
+        address: address.trim(),
+        description: description.trim(),
+        durationHours: hours,
+        paymentOffer: payment,
+      };
+
+      console.log('[PostGig] Request payload:', JSON.stringify(payload));
+
       await apiCall('/api/gigs', {
         method: 'POST',
-        body: JSON.stringify({
-          clientId: user.id,
-          category,
-          serviceDate: serviceDate.toISOString(),
-          serviceTime: formatTime(serviceTime),
-          address: address.trim(),
-          description: description.trim(),
-          durationDays: 0,
-          durationHours: hours,
-          paymentOffer: payment,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!mounted.current) return;

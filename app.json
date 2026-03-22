@@ -1,8 +1,8 @@
 {
   "expo": {
     "name": "Nyota-KE",
-    "slug": "nyota-ke",
-    "version": "1.0.35",
+    "slug": "nyota",
+    "version": "1.0.38",
     "orientation": "portrait",
     "icon": "./assets/images/8ef275bc-8f51-4955-80a7-99df5ae572b7.png",
     "userInterfaceStyle": "automatic",
@@ -26,7 +26,7 @@
         "backgroundColor": "#00D98E"
       },
       "package": "com.simphoni.nyota",
-      "versionCode": 36
+      "versionCode": 39
     },
     "web": {
       "favicon": "./assets/images/8ef275bc-8f51-4955-80a7-99df5ae572b7.png",
