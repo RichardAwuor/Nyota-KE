@@ -78,19 +78,18 @@ export default function RegisterClientScreen() {
     setSubmitError(null);
     setLoading(true);
 
-    const BASE_URL = 'https://9rs686wkexp8cbxgtddvuzrpcv4x9xn8.app.specular.dev';
     const requestBody = {
       email: emailTrimmed,
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
       county: selectedCounty,
     };
-    console.log('POST', `${BASE_URL}/api/users/register-client`);
+    console.log('POST', `${BACKEND_URL}/api/users/register-client`);
     console.log('Request body:', JSON.stringify(requestBody));
 
     let data: any = {};
     try {
-      const response = await fetch(`${BASE_URL}/api/users/register-client`, {
+      const response = await fetch(`${BACKEND_URL}/api/users/register-client`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
