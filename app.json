@@ -35,7 +35,15 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "react-native-edge-to-edge",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": ""
+        }
+      ],
+      "react-native-reanimated"
     ],
     "scheme": "nyotake",
     "experiments": {
