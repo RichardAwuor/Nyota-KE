@@ -25,7 +25,7 @@
         "foregroundImage": "./assets/images/aa2d6aa2-75c6-46b7-9fc0-8f9933dd61d9.png",
         "backgroundColor": "#00D98E"
       },
-      "package": "com.nyota-ke.app",
+      "package": "com.nyota.app",
       "versionCode": 40
     },
     "web": {
